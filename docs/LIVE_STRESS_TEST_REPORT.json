@@ -1,0 +1,321 @@
+{
+  "timestamp": "2026-11-21T14:57:23.213905",
+  "target_url": "https://demostore.metaposbd.com",
+  "database": "demostore",
+  "server_environment": {
+    "server_version": "19.0 Community Edition",
+    "os": "Ubuntu 24.04 LTS",
+    "database_engine": "PostgreSQL 16",
+    "prefork_workers": 5,
+    "custom_addons": [
+      "book_fair_pos",
+      "book_fair_stock",
+      "bangla_translations",
+      "metapos_saas"
+    ]
+  },
+  "auth_tests": {
+    "valid_login": {
+      "status": "PASS",
+      "uid": 2,
+      "duration_ms": 1470.72,
+      "user_name": "Administrator",
+      "currency_id": 55,
+      "session_cookie_captured": true,
+      "session_id_prefix": "zhGD5InIzqKGVnbM"
+    },
+    "get_session_info_active": {
+      "status": "PASS",
+      "duration_ms": 300.8,
+      "uid": 2,
+      "db": "demostore",
+      "user_context": {
+        "lang": "en_US",
+        "tz": "Asia/Dhaka",
+        "uid": 2
+      }
+    },
+    "missing_cookie_rejection": {
+      "status": "PASS",
+      "error_code": 100,
+      "error_name": "odoo.http.SessionExpiredException",
+      "error_message": "Odoo Session Expired",
+      "verbatim_rejection": "Session expired"
+    },
+    "invalid_password_rejection": {
+      "status": "PASS",
+      "error_name": "odoo.exceptions.AccessDenied",
+      "error_message": "Odoo Server Error"
+    },
+    "invalid_database_rejection": {
+      "status": "PASS",
+      "error_message": "Odoo Server Error",
+      "error_data": "Database not found."
+    }
+  },
+  "pos_discovery": {
+    "configs": {
+      "status": "PASS",
+      "count": 2,
+      "configs": [
+        {
+          "id": 1,
+          "name": "Book Fair",
+          "book_fair_mode": true,
+          "session_state": "opened"
+        },
+        {
+          "id": 2,
+          "name": "nilkhet",
+          "book_fair_mode": true,
+          "session_state": false
+        }
+      ],
+      "duration_ms": 275.77
+    },
+    "active_session": {
+      "status": "PASS",
+      "session_id": 23,
+      "session_name": "Book Fair/00014",
+      "config_id": 1,
+      "state": "opened",
+      "order_count": 280,
+      "duration_ms": 275.18
+    },
+    "non_existent_session_search": {
+      "status": "PASS",
+      "result_length": 0
+    }
+  },
+  "catalog_benchmark": {
+    "product_catalog": {
+      "status": "PASS",
+      "total_products": 128,
+      "books_count": 81,
+      "products_with_images": 72,
+      "products_zero_stock": 51,
+      "payload_size_kb": 377.13,
+      "fetch_duration_ms": 1185.47,
+      "avg_image_base64_chars": 4543.0,
+      "throughput_kb_per_sec": 318.13
+    },
+    "categories": {
+      "status": "PASS",
+      "total_categories": 23,
+      "contains_bengali_category": true,
+      "sample_categories": [
+        "Misc",
+        "Desks",
+        "Chairs",
+        "Books",
+        "অনুবাদ সাহিত্য"
+      ],
+      "duration_ms": 222.83
+    },
+    "fast_stock_lookup": {
+      "status": "PASS",
+      "queried_template_ids": [
+        44,
+        45,
+        62
+      ],
+      "stock_counts": {
+        "44": 50
+      },
+      "duration_ms": 227.68
+    }
+  },
+  "customer_edge_cases": {
+    "mobile_field_query_rejection": {
+      "status": "PASS",
+      "error_name": "builtins.ValueError",
+      "verbatim_error": "Invalid field 'mobile' on 'res.partner'"
+    },
+    "mobile_field_create_rejection": {
+      "status": "PASS",
+      "verbatim_error": "Invalid field 'mobile' in 'res.partner'"
+    },
+    "phone_search": {
+      "status": "PASS",
+      "count_found": 5,
+      "duration_ms": 229.36
+    },
+    "bengali_customer_create": {
+      "status": "PASS",
+      "partner_id": 29,
+      "name": "মুহিব্বুল্লাহ টেস্ট কাস্টমার 1450",
+      "phone": "01700251450",
+      "duration_ms": 291.98
+    },
+    "duplicate_phone_behavior": {
+      "status": "PASS",
+      "allowed_without_sql_error": true,
+      "second_partner_id": 30,
+      "architectural_note": "Odoo core res.partner enforces no unique constraint on phone; client must handle duplicate lookups"
+    }
+  },
+  "order_edge_cases": {
+    "standard_exact_cash_order": {
+      "status": "PASS",
+      "duration_ms": 391.22,
+      "order_id": 364
+    },
+    "overpayment_pattern_a_net_settlement": {
+      "status": "PASS",
+      "duration_ms": 340.33,
+      "order_id": 365,
+      "mechanics": "Client records gross customer tender (৳500) locally on thermal receipt, submits net settlement (৳110) to Odoo"
+    },
+    "overpayment_pattern_b_balancing_change_line": {
+      "status": "PASS",
+      "duration_ms": 307.18,
+      "order_id": 366,
+      "tender_amount": 500.0,
+      "change_amount": 498.68,
+      "mechanics": "Transmits tender line (৳500) paired with balancing negative change line (-৳390, is_change: true, name: 'ফেরত'); amount_paid set to total (৳110) and amount_return set to 0"
+    },
+    "overpayment_unbalanced_tender_rejection": {
+      "status": "PASS",
+      "error_name": "odoo.exceptions.UserError",
+      "verbatim_error": "Order / is not fully paid.",
+      "mechanics": "Submitting gross tender (৳500) with amount_return (৳390) without balancing negative change line triggers UserError('Order is not fully paid') in Odoo 19"
+    },
+    "duplicate_submission_idempotency": {
+      "status": "PASS",
+      "original_order_id": 364,
+      "returned_order_id": 364,
+      "uuid_preserved": "c12ee22e-42ea-4758-b7a4-06372de34e0e",
+      "duplicate_created": false,
+      "duration_ms": 335.05
+    },
+    "bangladeshi_mrp_reverse_tax": {
+      "status": "PASS",
+      "mrp_cover_price": 100.0,
+      "reverse_net_unit_price": 90.9091,
+      "computed_amount_tax": 9.09,
+      "confirmed_amount_total": 100.0,
+      "preserves_exact_mrp_total": true,
+      "duration_ms": 330.66
+    },
+    "multi_item_discount_order": {
+      "status": "PASS",
+      "duration_ms": 350.57,
+      "total_bdt": 139.43,
+      "order_id": 369
+    },
+    "split_payment_cash_card": {
+      "status": "PASS",
+      "duration_ms": 331.62,
+      "cash_split": 0.66,
+      "card_split": 0.66,
+      "order_id": 370
+    },
+    "invalid_session_id_rejection": {
+      "status": "PASS",
+      "error_name": "odoo.exceptions.MissingError",
+      "verbatim_error": "Record does not exist or has been deleted.\n(Record: pos.session(999999,), User: 2)"
+    }
+  },
+  "stress_benchmark": {
+    "sequential": {
+      "total_orders": 15,
+      "successful_orders": 15,
+      "total_elapsed_seconds": 5.03,
+      "throughput_orders_per_second": 2.98,
+      "min_ms": 287.54,
+      "max_ms": 408.47,
+      "avg_ms": 335.02,
+      "p50_ms": 312.36,
+      "p95_ms": 403.12,
+      "p99_ms": 407.4
+    },
+    "concurrent_sweep": {
+      "concurrency_1": {
+        "concurrent_workers": 1,
+        "batch_orders": 2,
+        "successful_orders": 2,
+        "failed_orders": 0,
+        "total_elapsed_seconds": 1.49,
+        "throughput_orders_per_second": 1.34,
+        "min_ms": 681.74,
+        "max_ms": 809.38,
+        "avg_ms": 745.56,
+        "p50_ms": 745.56,
+        "p95_ms": 803.0,
+        "p99_ms": 808.1
+      },
+      "concurrency_3": {
+        "concurrent_workers": 3,
+        "batch_orders": 6,
+        "successful_orders": 6,
+        "failed_orders": 0,
+        "total_elapsed_seconds": 1.59,
+        "throughput_orders_per_second": 3.78,
+        "min_ms": 687.71,
+        "max_ms": 809.78,
+        "avg_ms": 759.23,
+        "p50_ms": 772.76,
+        "p95_ms": 808.11,
+        "p99_ms": 809.44
+      },
+      "concurrency_5": {
+        "concurrent_workers": 5,
+        "batch_orders": 10,
+        "successful_orders": 10,
+        "failed_orders": 0,
+        "total_elapsed_seconds": 1.54,
+        "throughput_orders_per_second": 6.51,
+        "min_ms": 645.62,
+        "max_ms": 795.84,
+        "avg_ms": 731.28,
+        "p50_ms": 734.88,
+        "p95_ms": 778.15,
+        "p99_ms": 792.3
+      },
+      "concurrency_8": {
+        "concurrent_workers": 8,
+        "batch_orders": 16,
+        "successful_orders": 16,
+        "failed_orders": 0,
+        "total_elapsed_seconds": 1.79,
+        "throughput_orders_per_second": 8.96,
+        "min_ms": 654.01,
+        "max_ms": 951.64,
+        "avg_ms": 820.15,
+        "p50_ms": 831.25,
+        "p95_ms": 939.04,
+        "p99_ms": 949.12
+      }
+    }
+  },
+  "dashboard_kpis": {
+    "status": "PASS",
+    "period": {
+      "from": "2026-11-21",
+      "to": "2026-11-21",
+      "days": 1
+    },
+    "revenue_bdt": 73680.89,
+    "revenue_untaxed_bdt": 66991.7,
+    "total_orders": 336,
+    "book_copies_sold": 44.0,
+    "unique_titles_sold": 10,
+    "discounts_bdt": 2447.8062,
+    "avg_basket_bdt": 219.28836309523808,
+    "books_per_order": 0.13,
+    "hourly_histogram_buckets": 6,
+    "fetch_duration_ms": 269.81
+  },
+  "summary": {
+    "total_checks": 25,
+    "passed_checks": 25,
+    "overall_status": "PASS",
+    "key_architectural_findings": [
+      "Odoo 19 enforces phone field on res.partner; mobile field was removed and triggers ValueError.",
+      "Overpayment change return requires net settlement (Pattern A) or balancing change line (Pattern B, is_change: true, amount_paid == amount_total). Unbalanced tender triggers UserError.",
+      "Order idempotency operates on client RFC 4122 v4 UUID, returning existing order records without duplicate database rows.",
+      "Bangladeshi retail cover prices (MRP) require client-side reverse-net tax calculation (100 / 1.10 = 90.91) to maintain exact ৳100 gross price under additive 10% VAT.",
+      "Server prefork worker pool of 5 workers maintains sub-400ms latency for sequential requests, with latency climbing proportionally under concurrent saturation."
+    ]
+  }
+}

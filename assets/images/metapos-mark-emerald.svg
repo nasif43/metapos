@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Emerald Background Squircle -->
+  <rect x="20" y="20" width="160" height="160" rx="42" fill="#0BC279" />
+
+  <!-- Row 1 -->
+  <rect x="40" y="55" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="65.5" y="55" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="91" y="55" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="116.5" y="55" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="142" y="55" width="18" height="18" rx="4.5" fill="#FFFFFF" />
+
+  <!-- Row 2 -->
+  <rect x="40" y="80.5" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="91" y="80.5" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="142" y="80.5" width="18" height="18" rx="4.5" fill="#131926" />
+
+  <!-- Row 3 -->
+  <rect x="40" y="106" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="91" y="106" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="142" y="106" width="18" height="18" rx="4.5" fill="#131926" />
+
+  <!-- Row 4 -->
+  <rect x="40" y="131.5" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="91" y="131.5" width="18" height="18" rx="4.5" fill="#131926" />
+  <rect x="142" y="131.5" width="18" height="18" rx="4.5" fill="#131926" />
+</svg>

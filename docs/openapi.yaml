@@ -1,0 +1,1459 @@
+openapi: 3.1.0
+info:
+  title: MetaPOS Agnostic & Odoo 19 Dual Facade POS API
+  version: 1.0.0
+  description: |
+    Enterprise-grade, platform-agnostic OpenAPI 3.1.0 specification for MetaPOS Point of Sale.
+    Features a Dual Facade architecture:
+    1. Clean Agnostic RESTful endpoints (`/api/v1/...`) for any web or mobile frontend (Flutter, React Native, Swift, Kotlin, Vue/React).
+    2. Direct Odoo 19.0 Community JSON-RPC 2.0 endpoints (`/web/session/...`, `/web/dataset/call_kw/...`, `/web/image`) for zero-proxy direct client-to-backend communication.
+    
+    Includes full schemas, authentication workflows, offline synchronization invariants, and Bangladesh NBR Mushak 6.3 retail compliance.
+  contact:
+    name: MetaPOS Architecture Team
+    url: https://metaposbd.com
+servers:
+  - url: https://demostore.metaposbd.com
+    description: Live Demostore Backend (Odoo 19.0 Community, 5 Prefork Workers, PostgreSQL 16)
+  - url: http://localhost:8069
+    description: Local Development Instance
+
+paths:
+  # ==========================================
+  # FACADE 1: PLATFORM-AGNOSTIC REST ENDPOINTS
+  # ==========================================
+  /api/v1/auth/login:
+    post:
+      summary: Authenticate User & Initialize POS Session
+      description: Agnostic REST login endpoint. Authenticates against the backend, captures session credentials, and returns active user and currency context.
+      tags:
+        - Authentication & Session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: session_id=r_xrSNXKvXFRj4bRwV7k1Q...; Path=/; HttpOnly; Max-Age=604800
+              description: HTTP-only session cookie valid for 7 days (604,800 seconds).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestErrorResponse'
+              example:
+                code: 401
+                error: AccessDenied
+                message: Invalid database, username, or master password.
+
+  /api/v1/auth/session:
+    get:
+      summary: Get Current Session Status & Liveness
+      description: Returns active session metadata, database name, user details, language, and timezone.
+      tags:
+        - Authentication & Session
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session is active and valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionInfoResponse'
+        '401':
+          description: Session expired or unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Invalidate Current Session
+      description: Logs out the current user and invalidates the session cookie on the server.
+      tags:
+        - Authentication & Session
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Session successfully terminated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/registers:
+    get:
+      summary: Discover POS Registers & Workstations
+      description: Lists all available POS configurations (registers/cash points) and their current session status.
+      tags:
+        - Registers & Sessions
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: List of POS configurations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PosConfigModel'
+
+  /api/v1/registers/{id}/open:
+    post:
+      summary: Open POS Register Session
+      description: Opens a new POS session for the specified register configuration and sets opening cash control.
+      tags:
+        - Registers & Sessions
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: POS Config ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - opening_cash
+              properties:
+                opening_cash:
+                  type: number
+                  format: double
+                  description: Opening cash drawer float amount in BDT (৳)
+                  example: 1000.0
+                notes:
+                  type: string
+                  example: Starting shift with ৳1,000 cash drawer float.
+      responses:
+        '200':
+          description: Session opened successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionModel'
+        '409':
+          description: Register already has an active open session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestErrorResponse'
+
+  /api/v1/registers/{id}/close:
+    post:
+      summary: Close POS Register Session
+      description: Closes an active POS session, records closing cash control, and triggers financial reconciliation.
+      tags:
+        - Registers & Sessions
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: POS Config ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - closing_cash
+              properties:
+                closing_cash:
+                  type: number
+                  format: double
+                  example: 15420.0
+      responses:
+        '200':
+          description: Session closed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: integer
+                  state:
+                    type: string
+                    example: closed
+
+  /api/v1/catalog/products:
+    get:
+      summary: Fetch Product Catalog & Books
+      description: Retrieves available products for sale, including book metadata (ISBN, Author, Publisher) and Base64 thumbnail images.
+      tags:
+        - Catalog & Inventory
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: category_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Search term matching product name, barcode, or ISBN
+      responses:
+        '200':
+          description: Catalog products returned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 128
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductModel'
+
+  /api/v1/catalog/products/{id}/stock:
+    get:
+      summary: Fast Stock-on-Hand Query
+      description: High-speed real-time query bypassing slow inventory valuation to return immediate on-hand physical stock for a product template.
+      tags:
+        - Catalog & Inventory
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Product Template ID
+      responses:
+        '200':
+          description: Stock level returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  template_id:
+                    type: integer
+                    example: 44
+                  qty_on_hand:
+                    type: number
+                    format: double
+                    example: 66.0
+
+  /api/v1/catalog/categories:
+    get:
+      summary: Fetch POS Category Hierarchy
+      description: Returns all POS categories including localized Bengali category titles and parent-child hierarchy.
+      tags:
+        - Catalog & Inventory
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Categories retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PosCategoryModel'
+
+  /api/v1/customers:
+    get:
+      summary: Search Customers by Phone or Name
+      description: |
+        Search customers in `res.partner`.
+        **CRITICAL ODOO 19 BIAS**: Never query or filter by `mobile`. Odoo 19 core removed `mobile` from `res.partner`. Always query `phone`.
+      tags:
+        - Customers
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: phone
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Phone prefix or full number (e.g., '017')
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Name or phone search term
+      responses:
+        '200':
+          description: List of matching partners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartnerModel'
+    post:
+      summary: Register / Create New Customer
+      description: Creates a new customer record. Supports Bengali Unicode customer names and standard Bangladeshi phone numbers.
+      tags:
+        - Customers
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - phone
+              properties:
+                name:
+                  type: string
+                  example: মুহিব্বুল্লাহ টেস্ট কাস্টমার
+                phone:
+                  type: string
+                  example: '01700247140'
+                email:
+                  type: [string, "null"]
+                  format: email
+                street:
+                  type: [string, "null"]
+                  example: বাংলাবাজার, ঢাকা
+                vat:
+                  type: [string, "null"]
+                  description: Customer Tax ID / Business BIN for NBR Mushak 6.3 invoices
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerModel'
+
+  /api/v1/orders/sync:
+    post:
+      summary: Synchronize / Submit POS Order
+      description: |
+        Idempotent order submission endpoint. Accepts orders captured locally offline or online.
+        
+        **CRITICAL ARCHITECTURAL INVARIANTS**:
+        1. **Idempotency**: `uuid` must be an RFC 4122 v4 UUID. Resubmitting an identical UUID returns the existing confirmed order without creating duplicate database rows.
+        2. **Line UUIDs**: Every line must contain an independent RFC 4122 v4 UUID in `lines[i].uuid`. Odoo 19 enforces a database unique constraint `pos_order_line_unique_uuid`.
+        3. **Overpayment Change Balancing**:
+           - **Pattern A (Client Net Settlement)**: `amount_paid == amount_total`, single payment line of `amount_total`, `amount_return: 0.0`.
+           - **Pattern B (Balancing Change Line)**: Gross tender line (e.g. ৳500), paired with balancing negative change line (e.g. ৳-390, `is_change: true, name: 'ফেরত'`), `amount_paid == amount_total`, and top-level `amount_return: 0.0`.
+           - **Forbidden**: Sending top-level `amount_return > 0` causes verbatim error `UserError: অর্ডার /-এর মূল্য পুরোপুরি পরিশোধ হয়নি।`.
+      tags:
+        - Orders & Checkout
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PosOrderPayload'
+      responses:
+        '200':
+          description: Order synchronized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderSyncResponse'
+        '400':
+          description: Validation or payment balance error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestErrorResponse'
+        '404':
+          description: Stale session ID - automated re-binding required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestErrorResponse'
+
+  /api/v1/analytics/dashboard:
+    get:
+      summary: Live Book Fair Analytics Dashboard
+      description: Retrieves aggregated real-time sales KPIs, untaxed revenue, total copies sold, and hourly order velocity.
+      tags:
+        - Analytics & Reporting
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Dashboard metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardModel'
+
+  # ===============================================
+  # FACADE 2: NATIVE ODOO 19 JSON-RPC 2.0 ENDPOINTS
+  # ===============================================
+  /web/session/authenticate:
+    post:
+      summary: Native Odoo Session Authentication (JSON-RPC 2.0)
+      description: Direct Odoo 19 authentication RPC. Sets the HTTP-only `session_id` cookie and returns user context.
+      tags:
+        - Native Odoo JSON-RPC
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcAuthenticateRequest'
+      responses:
+        '200':
+          description: JSON-RPC 2.0 response with session info or exception
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: session_id=r_xrSNXKvXFRj4bRwV7k1Q...; Path=/; HttpOnly; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonRpcAuthenticateResponse'
+
+  /web/session/get_session_info:
+    post:
+      summary: Native Odoo Session Liveness Probe (JSON-RPC 2.0)
+      description: Validates session cookie liveness. Returns `SessionExpiredException` (code 100) if cookie is missing or expired.
+      tags:
+        - Native Odoo JSON-RPC
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcEmptyParamsRequest'
+      responses:
+        '200':
+          description: Active session info or SessionExpiredException
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonRpcSessionInfoResponse'
+
+  /web/session/destroy:
+    post:
+      summary: Native Odoo Session Destruction (JSON-RPC 2.0)
+      description: Terminates the current session on the Odoo server.
+      tags:
+        - Native Odoo JSON-RPC
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcEmptyParamsRequest'
+      responses:
+        '200':
+          description: Session terminated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonRpcGenericResponse'
+
+  /web/dataset/call_kw/{model}/{method}:
+    post:
+      summary: Native Odoo ORM Method Invocation (`call_kw`)
+      description: |
+        Executes any Odoo ORM model method with positional arguments (`args`) and keyword arguments (`kwargs`).
+        All POS operations (catalog, customers, sessions, stock, sync) invoke this gateway.
+        
+        **Standard Supported Models & Methods**:
+        - `pos.config` / `search_read`: Discover registers
+        - `pos.config` / `open_ui`: Initialize register UI
+        - `pos.session` / `search_read`: Query active sessions
+        - `pos.session` / `set_opening_control`: Set register opening cash balance
+        - `product.product` / `search_read`: Query products and book metadata
+        - `product.template` / `book_read_qty_on_hand`: High-speed stock count
+        - `pos.category` / `search_read`: Fetch POS categories
+        - `res.partner` / `search_read`: Search customers (using `phone` only)
+        - `res.partner` / `create`: Create customer
+        - `pos.order` / `sync_from_ui`: Submit order payload batch
+        - `book.fair.dashboard` / `get_dashboard_data`: Retrieve dashboard KPIs
+      tags:
+        - Native Odoo JSON-RPC
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+          example: pos.order
+        - name: method
+          in: path
+          required: true
+          schema:
+            type: string
+          example: sync_from_ui
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcCallKwRequest'
+      responses:
+        '200':
+          description: Standard JSON-RPC 2.0 envelope containing `result` or `error`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonRpcCallKwResponse'
+
+  /web/image:
+    get:
+      summary: Fetch Product or Partner Image Binary
+      description: Serves raw binary image (JPEG/PNG/WEBP) for products or partner avatars. Supports browser and CDN caching.
+      tags:
+        - Native Odoo JSON-RPC
+      security: []
+      parameters:
+        - name: model
+          in: query
+          required: true
+          schema:
+            type: string
+          example: product.product
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 62
+        - name: field
+          in: query
+          required: true
+          schema:
+            type: string
+          example: image_128
+        - name: unique
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Cache-busting timestamp or hash
+      responses:
+        '200':
+          description: Image binary stream
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Image not found
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session_id
+      description: Odoo session cookie captured from `Set-Cookie` on `/web/session/authenticate`.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Optional bearer token for REST facade API gateways.
+
+  schemas:
+    # ------------------------------------------
+    # CORE DOMAIN MODELS
+    # ------------------------------------------
+    ProductModel:
+      type: object
+      required:
+        - id
+        - name
+        - list_price
+        - display_name
+      properties:
+        id:
+          type: integer
+          example: 62
+        name:
+          type: string
+          example: Blackbird Classic Edition
+        display_name:
+          type: string
+          example: '[BK-0062] Blackbird Classic Edition'
+        list_price:
+          type: number
+          format: double
+          description: Base catalog list price in BDT (৳)
+          example: 100.0
+        barcode:
+          type: [string, "null", boolean]
+          example: '9789849123456'
+        default_code:
+          type: [string, "null", boolean]
+          description: SKU / Internal Reference
+          example: BK-0062
+        pos_categ_ids:
+          type: array
+          items:
+            type: integer
+          example: [3, 7]
+        taxes_id:
+          type: array
+          items:
+            type: integer
+          description: Relational tax IDs (e.g. [1] for 10% VAT)
+          example: [1]
+        image_128:
+          type: [string, "null", boolean]
+          description: Base64-encoded thumbnail image string
+        # Specialized Book Fair Metadata
+        isbn:
+          type: [string, "null", boolean]
+          example: '978-984-91234-5-6'
+        book_authors_display:
+          type: [string, "null", boolean]
+          example: মুহম্মদ জাফর ইকবাল
+        book_publisher_name:
+          type: [string, "null", boolean]
+          example: তাম্রলিপি প্রকাশনী
+        book_edition:
+          type: [string, "null", boolean]
+          example: ১ম সংস্করণ, ২০২৪
+        qty_available:
+          type: number
+          format: double
+          description: Cached on-hand stock quantity
+          example: 66.0
+
+    PartnerModel:
+      type: object
+      required:
+        - id
+        - name
+        - phone
+      properties:
+        id:
+          type: integer
+          example: 23
+        name:
+          type: string
+          example: মুহিব্বুল্লাহ টেস্ট কাস্টমার
+        phone:
+          type: string
+          description: Unified phone field. Note that 'mobile' is strictly removed in Odoo 19.
+          example: '01700247140'
+        email:
+          type: [string, "null", boolean]
+          example: customer@example.com
+        street:
+          type: [string, "null", boolean]
+          example: বাংলাবাজার, ঢাকা
+        city:
+          type: [string, "null", boolean]
+          example: Dhaka
+        vat:
+          type: [string, "null", boolean]
+          description: Customer Tax BIN for NBR Mushak 6.3 invoices
+          example: '123456789-0101'
+
+    PosConfigModel:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Book Fair Pavilion Register 1
+        current_session_id:
+          type: [array, boolean]
+          items:
+            oneOf:
+              - type: integer
+              - type: string
+          example: [23, 'Book Fair/00014']
+        current_session_state:
+          type: [string, boolean]
+          enum: [opened, opening_control, closing_control, closed, 'false', false]
+          example: opened
+        book_fair_mode:
+          type: boolean
+          example: true
+
+    SessionModel:
+      type: object
+      required:
+        - id
+        - name
+        - state
+        - config_id
+      properties:
+        id:
+          type: integer
+          example: 23
+        name:
+          type: string
+          example: Book Fair/00014
+        state:
+          type: string
+          enum: [opening_control, opened, closing_control, closed]
+          example: opened
+        config_id:
+          type: array
+          items:
+            oneOf:
+              - type: integer
+              - type: string
+          example: [1, 'Book Fair']
+        user_id:
+          type: array
+          items:
+            oneOf:
+              - type: integer
+              - type: string
+          example: [2, 'Administrator']
+        start_at:
+          type: string
+          format: date-time
+          example: '2026-11-21 07:00:00'
+        stop_at:
+          type: [string, "null"]
+          format: date-time
+
+    PosCategoryModel:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: অনুবাদ সাহিত্য
+        parent_id:
+          type: [array, boolean, "null"]
+          items:
+            oneOf:
+              - type: integer
+              - type: string
+          example: [1, 'বই']
+        sequence:
+          type: integer
+          example: 10
+
+    DashboardModel:
+      type: object
+      required:
+        - total_revenue
+        - untaxed_revenue
+        - total_orders
+        - copies_sold
+      properties:
+        total_revenue:
+          type: number
+          format: double
+          description: Gross revenue including VAT in BDT (৳)
+          example: 43649.47
+        untaxed_revenue:
+          type: number
+          format: double
+          description: Net revenue before VAT in BDT (৳)
+          example: 39690.41
+        total_orders:
+          type: integer
+          description: Total count of posted orders
+          example: 202
+        copies_sold:
+          type: number
+          format: double
+          description: Total physical quantity of books sold
+          example: 20.0
+        unique_titles:
+          type: integer
+          example: 7
+        total_discount:
+          type: number
+          format: double
+          example: 90.60
+        hourly_sales:
+          type: array
+          items:
+            type: object
+            properties:
+              hour:
+                type: integer
+                example: 14
+              revenue:
+                type: number
+                format: double
+                example: 8450.0
+
+    # ------------------------------------------
+    # ORDER SYNCHRONIZATION PAYLOAD DEFINITIONS
+    # ------------------------------------------
+    PosOrderPayload:
+      type: object
+      required:
+        - name
+        - session_id
+        - config_id
+        - company_id
+        - user_id
+        - date_order
+        - amount_tax
+        - amount_total
+        - amount_paid
+        - amount_return
+        - uuid
+        - lines
+        - payment_ids
+      properties:
+        name:
+          type: string
+          description: Human-readable order reference
+          example: Order - 000144
+        pos_reference:
+          type: string
+          description: POS workstation reference sequence
+          example: LIVE-264-1-32009
+        sequence_number:
+          type: integer
+          example: 144
+        session_id:
+          type: integer
+          description: Active Odoo POS session ID (e.g. 23). Must point to an opened session.
+          example: 23
+        config_id:
+          type: integer
+          example: 1
+        company_id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 2
+        partner_id:
+          type: [integer, boolean, "null"]
+          example: 23
+        date_order:
+          type: string
+          description: "Timestamp in 'YYYY-MM-DD HH:MM:SS' format in UTC/BST"
+          example: '2026-11-21 13:45:41'
+        amount_tax:
+          type: number
+          format: double
+          description: Total VAT amount
+          example: 9.09
+        amount_total:
+          type: number
+          format: double
+          description: Gross total payable
+          example: 100.0
+        amount_paid:
+          type: number
+          format: double
+          description: Net reconciled payment total. Must strictly equal amount_total.
+          example: 100.0
+        amount_return:
+          type: number
+          format: double
+          description: |
+            **MANDATORY ODOO 19 INVARIANT**: Top-level `amount_return` must be `0.0`.
+            Overpayment change must be recorded via balancing negative change payment line (`is_change: true, name: 'ফেরত'`).
+            Passing `amount_return > 0` causes verbatim error: `UserError: অর্ডার /-এর মূল্য পুরোপুরি পরিশোধ হয়নি।`.
+          example: 0.0
+        state:
+          type: string
+          enum: [draft, paid, done, invoiced]
+          default: paid
+          example: paid
+        to_invoice:
+          type: boolean
+          default: false
+        uuid:
+          type: string
+          format: uuid
+          description: RFC 4122 v4 UUID generated on client at transaction creation. Enforces idempotency.
+          example: 878aa87d-b335-409b-9cb0-6c8c194fbb7f
+        access_token:
+          type: string
+          format: uuid
+          example: 4a2b9194-e349-43c3-8884-6997424ea457
+        ticket_code:
+          type: string
+          example: '7140'
+        tracking_number:
+          type: string
+          example: '144'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLineTuple'
+          description: Array of Odoo command tuples `[0, 0, OrderLinePayload]` sorted by product_id ascending.
+        payment_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentLineTuple'
+          description: Array of Odoo command tuples `[0, 0, PaymentLinePayload]`.
+
+    OrderLineTuple:
+      type: array
+      items:
+        anyOf:
+          - type: integer
+          - $ref: '#/components/schemas/OrderLinePayload'
+      minItems: 3
+      maxItems: 3
+      example:
+        - 0
+        - 0
+        - product_id: 62
+          qty: 1.0
+          price_unit: 90.9091
+          price_subtotal: 90.91
+          price_subtotal_incl: 100.0
+          tax_ids: [[6, 0, [1]]]
+          uuid: 1f9d719e-7846-4de0-8c38-cb12a2702a1a
+
+    OrderLinePayload:
+      type: object
+      required:
+        - product_id
+        - qty
+        - price_unit
+        - price_subtotal
+        - price_subtotal_incl
+        - tax_ids
+        - uuid
+      properties:
+        product_id:
+          type: integer
+          example: 62
+        full_product_name:
+          type: string
+          example: Blackbird Classic Edition
+        qty:
+          type: number
+          format: double
+          example: 1.0
+        price_unit:
+          type: number
+          format: double
+          description: "Net unit price before tax (under reverse-net tax: MRP / 1.10)"
+          example: 90.9091
+        price_subtotal:
+          type: number
+          format: double
+          description: Net subtotal before tax
+          example: 90.91
+        price_subtotal_incl:
+          type: number
+          format: double
+          description: Gross subtotal including VAT
+          example: 100.0
+        discount:
+          type: number
+          format: double
+          default: 0.0
+          example: 0.0
+        tax_ids:
+          type: array
+          description: "Odoo command tuple for many2many tax IDs: [[6, 0, [tax_id]]]"
+          example: [[6, 0, [1]]]
+        uuid:
+          type: string
+          format: uuid
+          description: Independent RFC 4122 v4 UUID for the line. Must be strictly unique across the database.
+          example: 1f9d719e-7846-4de0-8c38-cb12a2702a1a
+
+    PaymentLineTuple:
+      type: array
+      items:
+        anyOf:
+          - type: integer
+          - $ref: '#/components/schemas/PaymentLinePayload'
+      minItems: 3
+      maxItems: 3
+      example:
+        - 0
+        - 0
+        - payment_method_id: 1
+          amount: 500.0
+          is_change: false
+          uuid: c7b4e871-382a-4df2-bc55-132d7821611c
+
+    PaymentLinePayload:
+      type: object
+      required:
+        - payment_method_id
+        - amount
+        - uuid
+      properties:
+        name:
+          type: [string, boolean, "null"]
+          description: Optional name for payment line (e.g. 'ফেরত' for change lines)
+          example: ফেরত
+        payment_method_id:
+          type: integer
+          description: 1 for Cash, 2 for Bank/Card/MFS (bKash/Nagad)
+          example: 1
+        amount:
+          type: number
+          format: double
+          description: Positive tender amount or negative change refund amount
+          example: 500.0
+        payment_date:
+          type: string
+          example: '2026-11-21 13:45:41'
+        is_change:
+          type: boolean
+          default: false
+          description: True if this line represents customer change return
+          example: false
+        session_id:
+          type: integer
+          example: 23
+        uuid:
+          type: string
+          format: uuid
+          example: c7b4e871-382a-4df2-bc55-132d7821611c
+
+    # ------------------------------------------
+    # REST FACADE REQUEST / RESPONSE MODELS
+    # ------------------------------------------
+    LoginRequest:
+      type: object
+      required:
+        - db
+        - login
+        - password
+      properties:
+        db:
+          type: string
+          example: demostore
+        login:
+          type: string
+          example: admin
+        password:
+          type: string
+          format: password
+          example: CaEYjbVrDuk8JtD9qykXifeKsmqQZ
+
+    LoginResponse:
+      type: object
+      required:
+        - uid
+        - name
+        - username
+        - currency_id
+        - currency_symbol
+      properties:
+        uid:
+          type: integer
+          example: 2
+        name:
+          type: string
+          example: Administrator
+        username:
+          type: string
+          example: admin
+        currency_id:
+          type: integer
+          example: 55
+        currency_symbol:
+          type: string
+          example: '৳'
+        db:
+          type: string
+          example: demostore
+        user_context:
+          type: object
+          properties:
+            lang:
+              type: string
+              example: bn_IN
+            tz:
+              type: string
+              example: Asia/Dhaka
+
+    SessionInfoResponse:
+      type: object
+      required:
+        - uid
+        - is_system
+        - db
+      properties:
+        uid:
+          type: integer
+          example: 2
+        is_system:
+          type: boolean
+          example: true
+        db:
+          type: string
+          example: demostore
+        name:
+          type: string
+          example: Administrator
+        username:
+          type: string
+          example: admin
+
+    OrderSyncResponse:
+      type: object
+      required:
+        - id
+        - uuid
+        - pos_reference
+        - amount_total
+      properties:
+        id:
+          type: integer
+          example: 144
+        uuid:
+          type: string
+          format: uuid
+          example: 878aa87d-b335-409b-9cb0-6c8c194fbb7f
+        pos_reference:
+          type: string
+          example: LIVE-264-1-32009
+        amount_total:
+          type: number
+          format: double
+          example: 100.0
+        amount_paid:
+          type: number
+          format: double
+          example: 100.0
+        state:
+          type: string
+          example: paid
+
+    RestErrorResponse:
+      type: object
+      required:
+        - code
+        - error
+        - message
+      properties:
+        code:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: ValidationError
+        message:
+          type: string
+          example: Order is not fully paid or duplicate line UUID detected.
+        details:
+          type: [string, object, "null"]
+
+    # ------------------------------------------
+    # NATIVE ODOO JSON-RPC 2.0 MODELS
+    # ------------------------------------------
+    JsonRpcAuthenticateRequest:
+      type: object
+      required:
+        - jsonrpc
+        - method
+        - params
+      properties:
+        jsonrpc:
+          type: string
+          enum: ['2.0']
+          example: '2.0'
+        method:
+          type: string
+          default: call
+          example: call
+        id:
+          type: integer
+          default: 1
+          example: 1
+        params:
+          type: object
+          required:
+            - db
+            - login
+            - password
+          properties:
+            db:
+              type: string
+              example: demostore
+            login:
+              type: string
+              example: admin
+            password:
+              type: string
+              example: CaEYjbVrDuk8JtD9qykXifeKsmqQZ
+
+    JsonRpcAuthenticateResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          example: '2.0'
+        id:
+          type: integer
+          example: 1
+        result:
+          type: [object, "null"]
+          properties:
+            uid:
+              type: integer
+              example: 2
+            is_system:
+              type: boolean
+              example: true
+            name:
+              type: string
+              example: Administrator
+            user_context:
+              type: object
+              properties:
+                lang:
+                  type: string
+                  example: bn_IN
+                tz:
+                  type: string
+                  example: Asia/Dhaka
+        error:
+          $ref: '#/components/schemas/JsonRpcError'
+
+    JsonRpcEmptyParamsRequest:
+      type: object
+      required:
+        - jsonrpc
+        - params
+      properties:
+        jsonrpc:
+          type: string
+          example: '2.0'
+        method:
+          type: string
+          default: call
+          example: call
+        id:
+          type: integer
+          example: 1
+        params:
+          type: object
+          default: {}
+
+    JsonRpcSessionInfoResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          example: '2.0'
+        id:
+          type: integer
+          example: 1
+        result:
+          $ref: '#/components/schemas/SessionInfoResponse'
+        error:
+          $ref: '#/components/schemas/JsonRpcError'
+
+    JsonRpcCallKwRequest:
+      type: object
+      required:
+        - jsonrpc
+        - method
+        - params
+      properties:
+        jsonrpc:
+          type: string
+          enum: ['2.0']
+          example: '2.0'
+        method:
+          type: string
+          default: call
+          example: call
+        id:
+          type: integer
+          example: 2
+        params:
+          type: object
+          required:
+            - model
+            - method
+            - args
+            - kwargs
+          properties:
+            model:
+              type: string
+              example: pos.order
+            method:
+              type: string
+              example: sync_from_ui
+            args:
+              type: array
+              description: Positional arguments list
+              example:
+                - - name: Order - 000144
+                    session_id: 23
+                    amount_total: 100.0
+                    amount_paid: 100.0
+                    amount_return: 0.0
+                    uuid: 878aa87d-b335-409b-9cb0-6c8c194fbb7f
+                    lines: []
+                    payment_ids: []
+            kwargs:
+              type: object
+              description: Keyword arguments dictionary
+              example: {}
+
+    JsonRpcCallKwResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          example: '2.0'
+        id:
+          type: integer
+          example: 2
+        result:
+          description: Return value of the invoked ORM method
+        error:
+          $ref: '#/components/schemas/JsonRpcError'
+
+    JsonRpcGenericResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          example: '2.0'
+        id:
+          type: integer
+          example: 1
+        result:
+          type: boolean
+          example: true
+        error:
+          $ref: '#/components/schemas/JsonRpcError'
+
+    # ------------------------------------------
+    # ODOO JSON-RPC ERROR TAXONOMY
+    # ------------------------------------------
+    JsonRpcError:
+      type: object
+      required:
+        - code
+        - message
+        - data
+      properties:
+        code:
+          type: integer
+          description: |
+            JSON-RPC error code.
+            - `200`: Standard Odoo business logic or ORM exception
+            - `100`: SessionExpiredException (unauthenticated or stale cookie)
+          example: 200
+        message:
+          type: string
+          example: Odoo Server Error
+        data:
+          $ref: '#/components/schemas/OdooExceptionData'
+
+    OdooExceptionData:
+      type: object
+      required:
+        - name
+        - message
+      properties:
+        name:
+          type: string
+          description: |
+            Full Python exception class name:
+            - `odoo.exceptions.AccessDenied`
+            - `odoo.exceptions.MissingError`
+            - `odoo.exceptions.UserError`
+            - `odoo.exceptions.ValidationError`
+            - `odoo.http.SessionExpiredException`
+            - `builtins.ValueError`
+          example: odoo.exceptions.UserError
+        message:
+          type: string
+          description: Verbatim exception message (often localized in Bengali bn_IN)
+          example: অর্ডার /-এর মূল্য পুরোপুরি পরিশোধ হয়নি।
+        debug:
+          type: string
+          description: Complete Python traceback
+        context:
+          type: object
