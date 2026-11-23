@@ -50,6 +50,14 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
 
   /// Fetches live dashboard data from Odoo 19 backend.
   Future<void> fetchDashboard({bool forceRefresh = false}) async {
+    // Optimization: Skip redundant remote fetch if data is fresh in memory (< 2 mins)
+    if (!forceRefresh && state.lastFetched != null) {
+      final elapsed = DateTime.now().difference(state.lastFetched!);
+      if (elapsed < const Duration(minutes: 2)) {
+        return;
+      }
+    }
+
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {

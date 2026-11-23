@@ -1003,124 +1003,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   /// Histogram 1: Hourly Sales Revenue in BDT
   Widget _buildHourlyRevenueHistogram(bool isBangla, List<HourlyStat> hourly) {
-    final maxRevenue = hourly.fold<double>(
-      0.0,
-      (max, e) => e.revenue > max ? e.revenue : max,
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  isBangla
-                      ? 'ঘণ্টা প্রতি বিক্রয়'
-                      : 'Hourly Sales',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: isBangla ? 'HindSiliguri' : 'PlusJakartaSans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          if (hourly.isEmpty)
-            Container(
-              height: 120,
-              alignment: Alignment.center,
-              child: Text(
-                isBangla
-                    ? 'আজকে এখনও কোনো বিক্রয় ডাটা রেকর্ড হয়নি'
-                    : 'No hourly sales recorded yet today',
-                style: AppTypography.bodyRegularBengali.copyWith(
-                  color: AppColors.textMuted,
-                ),
-              ),
-            )
-          else
-            SizedBox(
-              height: 140,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: hourly.map((h) {
-                  final double ratio = maxRevenue > 0 ? (h.revenue / maxRevenue) : 0.0;
-                  final double barHeight = (ratio * 80).clamp(6.0, 80.0);
-
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          // Value label
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              _formatCompactBdt(h.revenue),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.emeraldDark,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          // Bar
-                          Container(
-                            height: barHeight,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppColors.emerald, Color(0xFF059669)],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(4),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          // Time label
-                          Text(
-                            isBangla ? h.hourLabelBn : h.hourLabel,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontFamily: isBangla ? 'HindSiliguri' : 'PlusJakartaSans',
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-        ],
-      ),
+    return _buildHistogram(
+      title: isBangla ? 'ঘণ্টা প্রতি বিক্রয়' : 'Hourly Sales',
+      emptyMessage: isBangla
+          ? 'আজকে এখনও কোনো বিক্রয় ডাটা রেকর্ড হয়নি'
+          : 'No hourly sales recorded yet today',
+      isBangla: isBangla,
+      hourly: hourly,
+      getValue: (h) => h.revenue,
+      formatValue: (h) => _formatCompactBdt(h.revenue),
+      valueColor: AppColors.emeraldDark,
+      gradientColors: const [AppColors.emerald, Color(0xFF059669)],
     );
   }
 
   /// Histogram 2: Hourly Orders Volume
   Widget _buildHourlyOrdersHistogram(bool isBangla, List<HourlyStat> hourly) {
-    final maxOrders = hourly.fold<int>(
-      0,
-      (max, e) => e.orders > max ? e.orders : max,
+    return _buildHistogram(
+      title: isBangla ? 'ঘণ্টা প্রতি অর্ডার' : 'Hourly Orders',
+      emptyMessage: isBangla
+          ? 'আজকে এখনও কোনো অর্ডার সম্পন্ন হয়নি'
+          : 'No orders recorded yet today',
+      isBangla: isBangla,
+      hourly: hourly,
+      getValue: (h) => h.orders.toDouble(),
+      formatValue: (h) => '${h.orders}',
+      valueColor: const Color(0xFF1D4ED8),
+      gradientColors: const [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+    );
+  }
+
+  Widget _buildHistogram({
+    required String title,
+    required String emptyMessage,
+    required bool isBangla,
+    required List<HourlyStat> hourly,
+    required double Function(HourlyStat) getValue,
+    required String Function(HourlyStat) formatValue,
+    required Color valueColor,
+    required List<Color> gradientColors,
+  }) {
+    final maxValue = hourly.fold<double>(
+      0.0,
+      (max, e) => getValue(e) > max ? getValue(e) : max,
     );
 
     return Container(
@@ -1138,9 +1063,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             children: [
               Expanded(
                 child: Text(
-                  isBangla
-                      ? 'ঘণ্টা প্রতি অর্ডার'
-                      : 'Hourly Orders',
+                  title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1159,9 +1082,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               height: 120,
               alignment: Alignment.center,
               child: Text(
-                isBangla
-                    ? 'আজকে এখনও কোনো অর্ডার সম্পন্ন হয়নি'
-                    : 'No orders recorded yet today',
+                emptyMessage,
                 style: AppTypography.bodyRegularBengali.copyWith(
                   color: AppColors.textMuted,
                 ),
@@ -1173,7 +1094,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: hourly.map((h) {
-                  final double ratio = maxOrders > 0 ? (h.orders / maxOrders) : 0.0;
+                  final val = getValue(h);
+                  final double ratio = maxValue > 0 ? (val / maxValue) : 0.0;
                   final double barHeight = (ratio * 80).clamp(6.0, 80.0);
 
                   return Expanded(
@@ -1182,25 +1104,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          // Value label
                           FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              '${h.orders}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF1D4ED8),
+                              formatValue(h),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: valueColor,
                               ),
                             ),
                           ),
                           const SizedBox(height: 4),
-                          // Bar
                           Container(
                             height: barHeight,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                              gradient: LinearGradient(
+                                colors: gradientColors,
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                               ),
@@ -1210,7 +1130,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             ),
                           ),
                           const SizedBox(height: 6),
-                          // Time label
                           Text(
                             isBangla ? h.hourLabelBn : h.hourLabel,
                             style: TextStyle(

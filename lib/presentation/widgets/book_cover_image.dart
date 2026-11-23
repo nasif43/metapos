@@ -11,6 +11,8 @@ class BookCoverImage extends StatelessWidget {
   final String? imageBase64;
   final double? width;
   final double? height;
+  final int? cacheWidth;
+  final int? cacheHeight;
   final BoxFit fit;
   final BorderRadius? borderRadius;
   final Widget? fallback;
@@ -24,6 +26,8 @@ class BookCoverImage extends StatelessWidget {
     required this.imageBase64,
     this.width,
     this.height,
+    this.cacheWidth,
+    this.cacheHeight,
     this.fit = BoxFit.contain,
     this.borderRadius,
     this.fallback,
@@ -86,6 +90,8 @@ class BookCoverImage extends StatelessWidget {
       bytes,
       width: width,
       height: height,
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
       fit: fit,
       filterQuality: FilterQuality.medium,
       gaplessPlayback: true, // Prevents blank flickering frame during widget rebuilds

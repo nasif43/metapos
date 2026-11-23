@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,6 +24,7 @@ class CustomerSelectorScreen extends ConsumerStatefulWidget {
 class _CustomerSelectorScreenState
     extends ConsumerState<CustomerSelectorScreen> {
   final _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -34,8 +36,18 @@ class _CustomerSelectorScreenState
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String val) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        ref.read(customerProvider.notifier).searchCustomers(val);
+      }
+    });
   }
 
   void _showAddCustomerSheet() {
@@ -184,9 +196,7 @@ class _CustomerSelectorScreenState
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    onChanged: (val) {
-                      ref.read(customerProvider.notifier).searchCustomers(val);
-                    },
+                    onChanged: _onSearchChanged,
                     decoration: InputDecoration(
                       hintText: isBangla
                           ? 'নাম বা মোবাইল নম্বর খুঁজুন...'

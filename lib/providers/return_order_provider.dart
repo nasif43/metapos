@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/order_model.dart';
 import '../data/repositories/order_repository.dart';
 import 'order_provider.dart';
+import 'dashboard_provider.dart';
+import 'past_orders_provider.dart';
 import 'session_provider.dart';
 
 /// Immutable state representation for the return order process and cart.
@@ -311,6 +313,8 @@ class ReturnOrderNotifier extends StateNotifier<ReturnOrderState> {
 
       // 6. On success: updates lastCompletedOrderProvider and sets completedRefundOrder
       ref.read(lastCompletedOrderProvider.notifier).state = refundOrder;
+      ref.read(dashboardProvider.notifier).fetchDashboard(forceRefresh: true);
+      ref.read(pastOrdersProvider.notifier).loadOrders();
 
       state = state.copyWith(
         isSubmitting: false,

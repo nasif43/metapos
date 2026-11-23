@@ -625,6 +625,8 @@ class _CatalogMasterScreenState extends ConsumerState<CatalogMasterScreen>
                                               imageBase64: book.image128,
                                               width: double.infinity,
                                               height: double.infinity,
+                                              cacheWidth: 240,
+                                              cacheHeight: 360,
                                               fit: BoxFit.contain,
                                               borderRadius: BorderRadius.circular(4),
                                             ),

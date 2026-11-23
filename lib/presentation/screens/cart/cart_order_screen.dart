@@ -586,6 +586,8 @@ class _CartOrderScreenState extends ConsumerState<CartOrderScreen> {
                                       imageBase64: item.product.image128,
                                       width: 42,
                                       height: 52,
+                                      cacheWidth: 84,
+                                      cacheHeight: 104,
                                       borderRadius:
                                           BorderRadius.circular(AppSpacing.radiusSm),
                                     ),

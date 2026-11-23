@@ -34,6 +34,7 @@ class CatalogState {
   final String? searchQuery;
   final int? selectedCategoryId;
   final String? errorMessage;
+  final DateTime? lastFetched;
 
   const CatalogState({
     this.products = const [],
@@ -42,7 +43,14 @@ class CatalogState {
     this.searchQuery,
     this.selectedCategoryId,
     this.errorMessage,
+    this.lastFetched,
   });
+
+  /// Returns true if catalog data was fetched within the given [ttl] duration.
+  bool isFresh([Duration ttl = const Duration(minutes: 5)]) {
+    if (lastFetched == null || products.isEmpty) return false;
+    return DateTime.now().difference(lastFetched!) < ttl;
+  }
 
   /// Products filtered by active search query and selected category pill.
   List<ProductModel> get filteredProducts {
@@ -89,6 +97,7 @@ class CatalogState {
     int? selectedCategoryId,
     bool clearCategory = false,
     String? errorMessage,
+    DateTime? lastFetched,
   }) {
     return CatalogState(
       products: products ?? this.products,
@@ -98,6 +107,7 @@ class CatalogState {
       selectedCategoryId:
           clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
       errorMessage: errorMessage,
+      lastFetched: lastFetched ?? this.lastFetched,
     );
   }
 }
@@ -129,6 +139,16 @@ class CatalogNotifier extends StateNotifier<CatalogState> {
     bool forceRefresh = false,
     bool isOffline = false,
   }) async {
+    // Optimization: Skip redundant remote network fetches if data is fresh in memory (< 5 mins)
+    if (!forceRefresh && !isOffline && state.isFresh()) {
+      return CatalogSyncResult(
+        success: true,
+        productsCount: state.products.length,
+        categoriesCount: state.categories.length,
+        isFromCache: true,
+      );
+    }
+
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     // 1. Try local cache first for instant responsiveness
@@ -166,6 +186,7 @@ class CatalogNotifier extends StateNotifier<CatalogState> {
         products: freshProducts,
         categories: freshCategories,
         isLoading: false,
+        lastFetched: DateTime.now(),
       );
 
       return CatalogSyncResult(

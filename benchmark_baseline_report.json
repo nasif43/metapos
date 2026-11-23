@@ -1,0 +1,23 @@
+{
+  "auth_latency_ms": 1790.92,
+  "catalog_load_latency_ms": 1661.14,
+  "catalog_records_count": 129,
+  "dashboard_load_latency_ms": 243.35,
+  "redundant_calls_without_caching": {
+    "cycles": 5,
+    "total_calls": 15,
+    "total_duration_ms": 8717.58,
+    "avg_latency_per_call_ms": 581.17,
+    "total_data_transferred_kb": 12266.27,
+    "wasted_redundant_data_kb": 10630.77
+  },
+  "rapid_search_stress": {
+    "queries_executed": 6,
+    "avg_query_latency_ms": 214.5,
+    "min_latency_ms": 196.27,
+    "max_latency_ms": 268.0,
+    "error_count": 0
+  },
+  "catalog_payload_kb": 1225.02,
+  "dashboard_payload_kb": 3.21
+}

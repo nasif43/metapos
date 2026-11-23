@@ -1,0 +1,36 @@
+{
+  "initial_load": {
+    "auth_latency_ms": 1585.07,
+    "catalog_products_count": 129,
+    "catalog_latency_ms": 1488.07,
+    "catalog_payload_kb": 1225.02,
+    "dashboard_latency_ms": 236.62,
+    "dashboard_payload_kb": 1.44
+  },
+  "navigation_5_cycles": {
+    "before_optimization": {
+      "network_calls": 15,
+      "total_duration_ms": 16063.83,
+      "data_transferred_kb": 12257.42,
+      "wasted_redundant_kb": 11030.96
+    },
+    "after_optimization": {
+      "network_calls": 2,
+      "total_duration_ms": 1725.29,
+      "data_transferred_kb": 1226.46,
+      "wasted_redundant_kb": 0.0
+    },
+    "reduction_percentage": {
+      "calls_reduction": "86.7%",
+      "latency_reduction": "89.3%",
+      "bandwidth_saved": "90.0%"
+    }
+  },
+  "customer_search_keystroke_stress": {
+    "before_debounce_calls": 11,
+    "after_debounce_calls": 1,
+    "before_latency_ms": 2350.64,
+    "after_latency_ms": 213.69,
+    "api_call_reduction": "90.9%"
+  }
+}

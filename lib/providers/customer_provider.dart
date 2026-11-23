@@ -13,6 +13,7 @@ class CustomerState {
   final bool isLoading;
   final String? searchQuery;
   final String? errorMessage;
+  final DateTime? lastFetched;
 
   const CustomerState({
     this.customers = const [],
@@ -20,6 +21,7 @@ class CustomerState {
     this.isLoading = false,
     this.searchQuery,
     this.errorMessage,
+    this.lastFetched,
   });
 
   CustomerState copyWith({
@@ -29,6 +31,7 @@ class CustomerState {
     bool? isLoading,
     String? searchQuery,
     String? errorMessage,
+    DateTime? lastFetched,
   }) {
     return CustomerState(
       customers: customers ?? this.customers,
@@ -37,6 +40,7 @@ class CustomerState {
       isLoading: isLoading ?? this.isLoading,
       searchQuery: searchQuery ?? this.searchQuery,
       errorMessage: errorMessage,
+      lastFetched: lastFetched ?? this.lastFetched,
     );
   }
 }
@@ -58,7 +62,20 @@ class CustomerNotifier extends StateNotifier<CustomerState> {
   }) : super(const CustomerState());
 
   /// Searches customers by phone, name, or barcode.
-  Future<void> searchCustomers(String query, {bool isOffline = false}) async {
+  Future<void> searchCustomers(
+    String query, {
+    bool isOffline = false,
+  }) async {
+    // Optimization: If initial empty query was recently fetched (< 5 mins), reuse cached data
+    if (query.isEmpty &&
+        state.customers.isNotEmpty &&
+        state.lastFetched != null) {
+      final elapsed = DateTime.now().difference(state.lastFetched!);
+      if (elapsed < const Duration(minutes: 5)) {
+        return;
+      }
+    }
+
     state = state.copyWith(isLoading: true, searchQuery: query, errorMessage: null);
 
     // Try local database first
@@ -80,6 +97,7 @@ class CustomerNotifier extends StateNotifier<CustomerState> {
       state = state.copyWith(
         customers: remoteMatches,
         isLoading: false,
+        lastFetched: query.isEmpty ? DateTime.now() : state.lastFetched,
       );
     } catch (e) {
       state = state.copyWith(

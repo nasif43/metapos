@@ -12,6 +12,8 @@ import '../../../core/localization/locale_provider.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/connectivity_provider.dart';
 import '../../../providers/order_provider.dart';
+import '../../../providers/dashboard_provider.dart';
+import '../../../providers/past_orders_provider.dart';
 import '../../../providers/session_provider.dart';
 import '../../../providers/sync_queue_provider.dart';
 import '../../widgets/language_toggle_button.dart';
@@ -227,6 +229,12 @@ class _CheckoutPaymentScreenState extends ConsumerState<CheckoutPaymentScreen>
 
       // Refresh sync queue counts
       await ref.read(syncQueueProvider.notifier).refreshCounts();
+
+      // Refresh dashboard & past orders in background if online
+      if (isOnline) {
+        ref.read(dashboardProvider.notifier).fetchDashboard(forceRefresh: true);
+        ref.read(pastOrdersProvider.notifier).loadOrders();
+      }
 
       // 2. Persist order into Riverpod provider for receipt inspection
       ref.read(lastCompletedOrderProvider.notifier).state = completedOrder;
