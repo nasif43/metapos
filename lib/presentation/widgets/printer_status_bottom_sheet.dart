@@ -315,69 +315,87 @@ class PrinterStatusBottomSheet extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Column(
-                children: printerState.availableDevices.map((device) {
-                  final isCurrent = device.address == selectedDevice?.address;
-                  return Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: 2,
-                      ),
-                      leading: Icon(
-                        Icons.bluetooth_rounded,
-                        color: isCurrent && isConnected
-                            ? AppColors.emerald
-                            : AppColors.textMuted,
-                      ),
-                      title: Row(
+              child: printerState.availableDevices.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Row(
                         children: [
+                          const Icon(Icons.bluetooth_disabled_rounded, color: AppColors.textMuted),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
-                              device.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.bodyMedium.copyWith(
-                                fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                                color: isCurrent ? AppColors.emeraldDark : AppColors.textPrimary,
-                              ),
+                              isBangla
+                                  ? 'কোনো ব্লুটুথ প্রিন্টার পেয়ার করা নেই। আপনার ফোনের সেটিংস থেকে থার্মাল প্রিন্টার সংযুক্ত করুন।'
+                                  : 'No Bluetooth printer paired. Connect a thermal printer in your device settings.',
+                              style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
                             ),
                           ),
-                          if (device.isDefault) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.mint,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'Default',
-                                style: AppTypography.caption.copyWith(
-                                  color: AppColors.emeraldDark,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
-                      subtitle: Text(
-                        device.address,
-                        style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
-                      ),
-                      trailing: isCurrent
-                          ? const Icon(Icons.check_circle_rounded, color: AppColors.emerald)
-                          : const Icon(Icons.radio_button_unchecked, color: AppColors.textMuted),
-                      onTap: () {
-                        printerNotifier.selectDevice(device);
-                      },
+                    )
+                  : Column(
+                      children: printerState.availableDevices.map((device) {
+                        final isCurrent = device.address == selectedDevice?.address;
+                        return Material(
+                          color: Colors.transparent,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: 2,
+                            ),
+                            leading: Icon(
+                              Icons.bluetooth_rounded,
+                              color: isCurrent && isConnected
+                                  ? AppColors.emerald
+                                  : AppColors.textMuted,
+                            ),
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    device.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                                      color: isCurrent ? AppColors.emeraldDark : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                if (device.isDefault) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.mint,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Default',
+                                      style: AppTypography.caption.copyWith(
+                                        color: AppColors.emeraldDark,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            subtitle: Text(
+                              device.address,
+                              style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                            ),
+                            trailing: isCurrent
+                                ? const Icon(Icons.check_circle_rounded, color: AppColors.emerald)
+                                : const Icon(Icons.radio_button_unchecked, color: AppColors.textMuted),
+                            onTap: () {
+                              printerNotifier.selectDevice(device);
+                            },
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  );
-                }).toList(),
-              ),
             ),
           ],
         ),

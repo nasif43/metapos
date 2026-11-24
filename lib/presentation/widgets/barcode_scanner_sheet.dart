@@ -6,7 +6,6 @@ import '../../core/localization/locale_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
-import '../../core/utils/currency_formatter.dart';
 import '../../data/models/product_model.dart';
 
 /// Modal bottom sheet providing REAL live hardware camera barcode/QR scanning
@@ -390,22 +389,6 @@ class _BarcodeScannerSheetState extends ConsumerState<BarcodeScannerSheet> {
             ),
             const SizedBox(height: AppSpacing.md),
 
-            // Quick-Scan Presets Strip
-            Text(
-              isBangla ? 'দ্রুত স্ক্যান টেস্ট:' : 'Quick Test Presets:',
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _buildProductPresetChips(isBangla),
-            ),
-            const SizedBox(height: AppSpacing.md),
-
             // Error Message (if any)
             if (_errorMessage != null) ...[
               Container(
@@ -479,109 +462,6 @@ class _BarcodeScannerSheetState extends ConsumerState<BarcodeScannerSheet> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  List<Widget> _buildProductPresetChips(bool isBangla) {
-    final validProducts = widget.products
-        .where((p) =>
-            (p.barcode != null && p.barcode!.isNotEmpty) ||
-            (p.isbn != null && p.isbn!.isNotEmpty))
-        .toList();
-
-    if (validProducts.isEmpty) {
-      return [
-        _buildPresetChip(
-          label: isBangla ? '00000000 • অপরিচিত কোড' : '00000000 • Unknown Code',
-          code: '00000000',
-          isDanger: true,
-        ),
-      ];
-    }
-
-    final inStockProducts =
-        validProducts.where((p) => p.bookQtyOnHand > 0).take(3);
-    final outOfStockProducts =
-        validProducts.where((p) => p.bookQtyOnHand <= 0).take(1);
-
-    final List<Widget> chips = [];
-
-    for (final p in inStockProducts) {
-      final code = p.barcode ?? p.isbn!;
-      final bookName = p.displayName.isNotEmpty ? p.displayName : p.name;
-      final priceStr = CurrencyFormatter.formatBDT(p.listPrice);
-      chips.add(
-        _buildPresetChip(
-          label: '$code • $bookName • $priceStr',
-          code: code,
-        ),
-      );
-    }
-
-    for (final p in outOfStockProducts) {
-      final code = p.barcode ?? p.isbn!;
-      final bookName = p.displayName.isNotEmpty ? p.displayName : p.name;
-      chips.add(
-        _buildPresetChip(
-          label: isBangla
-              ? '$code • $bookName • স্টক শেষ'
-              : '$code • $bookName • Out of Stock',
-          code: code,
-          isWarning: true,
-        ),
-      );
-    }
-
-    chips.add(
-      _buildPresetChip(
-        label: isBangla ? '00000000 • অপরিচিত কোড' : '00000000 • Unknown Code',
-        code: '00000000',
-        isDanger: true,
-      ),
-    );
-
-    return chips;
-  }
-
-  Widget _buildPresetChip({
-    required String label,
-    required String code,
-    bool isWarning = false,
-    bool isDanger = false,
-  }) {
-    Color bg = AppColors.canvas;
-    Color border = AppColors.border;
-    Color textColor = AppColors.textPrimary;
-
-    if (isWarning) {
-      bg = AppColors.statusLowStockBg;
-      border = AppColors.statusLowStock.withValues(alpha: 0.5);
-      textColor = const Color(0xFFB45309);
-    } else if (isDanger) {
-      bg = AppColors.statusOutOfStockBg;
-      border = AppColors.statusOutOfStock.withValues(alpha: 0.5);
-      textColor = AppColors.statusOutOfStock;
-    }
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width - 48,
-      ),
-      child: ActionChip(
-        backgroundColor: bg,
-        side: BorderSide(color: border),
-        label: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        onPressed: () => _processCode(code),
       ),
     );
   }

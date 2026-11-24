@@ -28,4 +28,23 @@ class OdooDashboardService {
     }
     return DashboardModel.empty();
   }
+
+  /// Calls Odoo 19 native `report.point_of_sale.report_saledetails.get_sale_details`
+  /// to fetch real-time session sales figures, payment methods, and product totals.
+  Future<Map<String, dynamic>> fetchSessionSaleDetails(int sessionId) async {
+    try {
+      final result = await client.executeCall(
+        'report.point_of_sale.report_saledetails',
+        'get_sale_details',
+        [],
+        {'session_ids': [sessionId]},
+      );
+      if (result is Map<String, dynamic>) {
+        return result;
+      }
+    } catch (_) {
+      // Return empty map on network or RPC errors
+    }
+    return {};
+  }
 }

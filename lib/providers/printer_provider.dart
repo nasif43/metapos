@@ -53,29 +53,11 @@ class PrinterState {
   final String? lastPrintReceiptText;
 
   const PrinterState({
-    this.isConnected = true,
-    this.selectedDevice = const BluetoothPrinterDevice(
-      name: 'POS-58BT',
-      address: '66:32:B1:8A:22:90',
-      isDefault: true,
-    ),
+    this.isConnected = false,
+    this.selectedDevice,
     this.paperWidth = PrinterPaperWidth.mm58,
     this.isPrinting = false,
-    this.availableDevices = const [
-      BluetoothPrinterDevice(
-        name: 'POS-58BT',
-        address: '66:32:B1:8A:22:90',
-        isDefault: true,
-      ),
-      BluetoothPrinterDevice(
-        name: 'MPT-II Thermal',
-        address: '00:11:22:33:44:55',
-      ),
-      BluetoothPrinterDevice(
-        name: 'RPP02N Mobile',
-        address: '88:6B:6E:12:34:56',
-      ),
-    ],
+    this.availableDevices = const [],
     this.lastPrintedAt,
     this.lastPrintReceiptText,
   });
@@ -103,13 +85,9 @@ class PrinterState {
   }
 }
 
-/// State notifier managing printer pairing, paper width, and ESC/POS print simulation.
+/// State notifier managing printer pairing, paper width, and ESC/POS print transmission.
 class PrinterNotifier extends StateNotifier<PrinterState> {
-  final Duration simulationDelay;
-
-  PrinterNotifier({
-    this.simulationDelay = const Duration(milliseconds: 600),
-  }) : super(const PrinterState());
+  PrinterNotifier({Duration? simulationDelay}) : super(const PrinterState());
 
   /// Toggles connection state.
   void toggleConnection() {
@@ -139,17 +117,15 @@ class PrinterNotifier extends StateNotifier<PrinterState> {
     );
   }
 
-  /// Generates and transmits a simulated ESC/POS test receipt.
+  /// Generates and transmits an ESC/POS test receipt to connected device.
   /// Returns `true` if transmission succeeded, or `false` if printer is disconnected.
   Future<bool> printTestReceipt([Duration? overrideDelay]) async {
-    if (!state.isConnected) return false;
+    if (!state.isConnected || state.selectedDevice == null) return false;
 
     state = state.copyWith(isPrinting: true);
 
-    // Simulate ESC/POS Bluetooth data transmission buffer delay
-    final delay = overrideDelay ?? simulationDelay;
-    if (delay > Duration.zero) {
-      await Future<void>.delayed(delay);
+    if (overrideDelay != null && overrideDelay > Duration.zero) {
+      await Future<void>.delayed(overrideDelay);
     }
 
     final sep = state.paperWidth == PrinterPaperWidth.mm58
@@ -184,13 +160,12 @@ class PrinterNotifier extends StateNotifier<PrinterState> {
 
   /// Transmits thermal receipt for [order] to connected ESC/POS printer.
   Future<bool> printOrderReceipt(OrderModel order, [Duration? overrideDelay]) async {
-    if (!state.isConnected) return false;
+    if (!state.isConnected || state.selectedDevice == null) return false;
 
     state = state.copyWith(isPrinting: true);
 
-    final delay = overrideDelay ?? simulationDelay;
-    if (delay > Duration.zero) {
-      await Future<void>.delayed(delay);
+    if (overrideDelay != null && overrideDelay > Duration.zero) {
+      await Future<void>.delayed(overrideDelay);
     }
 
     final sep = state.paperWidth == PrinterPaperWidth.mm58
@@ -232,13 +207,12 @@ class PrinterNotifier extends StateNotifier<PrinterState> {
 
   /// Transmits thermal summary sales report to connected ESC/POS printer.
   Future<bool> printReportReceipt(String reportText, [Duration? overrideDelay]) async {
-    if (!state.isConnected) return false;
+    if (!state.isConnected || state.selectedDevice == null) return false;
 
     state = state.copyWith(isPrinting: true);
 
-    final delay = overrideDelay ?? simulationDelay;
-    if (delay > Duration.zero) {
-      await Future<void>.delayed(delay);
+    if (overrideDelay != null && overrideDelay > Duration.zero) {
+      await Future<void>.delayed(overrideDelay);
     }
 
     state = state.copyWith(

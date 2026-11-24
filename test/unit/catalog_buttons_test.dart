@@ -149,15 +149,15 @@ void main() {
   // 1. PrinterProvider Tests
   // ---------------------------------------------------------------------------
   group('PrinterProvider Unit Tests', () {
-    test('Initial state: connected with POS-58BT, 58mm paper width, 3 devices', () {
+    test('Initial state: disconnected by default, 58mm paper width, 0 devices', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       final state = container.read(printerProvider);
-      expect(state.isConnected, isTrue);
-      expect(state.selectedDevice?.name, 'POS-58BT');
+      expect(state.isConnected, isFalse);
+      expect(state.selectedDevice, isNull);
       expect(state.paperWidth, PrinterPaperWidth.mm58);
-      expect(state.availableDevices.length, 3);
+      expect(state.availableDevices.length, 0);
       expect(state.isPrinting, isFalse);
       expect(state.lastPrintedAt, isNull);
     });
@@ -169,16 +169,16 @@ void main() {
       final notifier = container.read(printerProvider.notifier);
 
       notifier.toggleConnection();
-      expect(container.read(printerProvider).isConnected, isFalse);
-
-      notifier.toggleConnection();
       expect(container.read(printerProvider).isConnected, isTrue);
 
-      notifier.disconnect();
+      notifier.toggleConnection();
       expect(container.read(printerProvider).isConnected, isFalse);
 
       notifier.connect();
       expect(container.read(printerProvider).isConnected, isTrue);
+
+      notifier.disconnect();
+      expect(container.read(printerProvider).isConnected, isFalse);
     });
 
     test('Paper width switching between 58mm and 80mm', () {
@@ -221,6 +221,10 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(printerProvider.notifier);
+      notifier.selectDevice(const BluetoothPrinterDevice(
+        name: 'POS-58BT',
+        address: '66:32:B1:8A:22:90',
+      ));
 
       final success = await notifier.printTestReceipt(Duration.zero);
       expect(success, isTrue);
@@ -403,14 +407,10 @@ void main() {
 
       expect(find.text('বারকোড / কিউআর স্ক্যানার'), findsOneWidget);
       expect(find.byType(MobileScanner), findsOneWidget);
-      expect(find.text('দ্রুত স্ক্যান টেস্ট:'), findsOneWidget);
-      expect(find.text('5556666 • ব্ল্যাকবার্ড ক্লাসিক • ৳ 100'), findsOneWidget);
-      expect(find.text('978984950003 • সায়েন্স ফিকশন অমনিবাস • স্টক শেষ'), findsOneWidget);
-      expect(find.text('00000000 • অপরিচিত কোড'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('Tapping preset 5556666 calls onProductScanned with matched product',
+    testWidgets('Entering barcode 5556666 calls onProductScanned with matched product',
         (tester) async {
       ProductModel? scannedProduct;
 
@@ -427,7 +427,8 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('5556666 • ব্ল্যাকবার্ড ক্লাসিক • ৳ 100'));
+      await tester.enterText(find.byType(TextField), '5556666');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
 
       expect(scannedProduct, isNotNull);
@@ -435,7 +436,7 @@ void main() {
       expect(scannedProduct?.name, 'ব্ল্যাকবার্ড ক্লাসিক');
     });
 
-    testWidgets('Tapping out-of-stock preset calls onOutOfStock handler',
+    testWidgets('Entering out-of-stock barcode calls onOutOfStock handler',
         (tester) async {
       ProductModel? oosProduct;
 
@@ -453,7 +454,8 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('978984950003 • সায়েন্স ফিকশন অমনিবাস • স্টক শেষ'));
+      await tester.enterText(find.byType(TextField), '978984950003');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
 
       expect(oosProduct, isNotNull);
@@ -495,9 +497,18 @@ void main() {
   group('PrinterStatusBottomSheet Widget Tests', () {
     testWidgets('Renders device details, 58mm/80mm toggle, and test print button',
         (tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(printerProvider.notifier).selectDevice(const BluetoothPrinterDevice(
+        name: 'POS-58BT',
+        address: '66:32:B1:8A:22:90',
+        isDefault: true,
+      ));
+
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
             home: Scaffold(
               body: PrinterStatusBottomSheet(),
             ),
@@ -541,6 +552,10 @@ void main() {
         (tester) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
+      container.read(printerProvider.notifier).selectDevice(const BluetoothPrinterDevice(
+        name: 'POS-58BT',
+        address: '66:32:B1:8A:22:90',
+      ));
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -566,9 +581,14 @@ void main() {
         (tester) async {
       final container = ProviderContainer(
         overrides: [
-          printerProvider.overrideWith((ref) => PrinterNotifier(
-                simulationDelay: Duration.zero,
-              )),
+          printerProvider.overrideWith((ref) {
+            final n = PrinterNotifier();
+            n.selectDevice(const BluetoothPrinterDevice(
+              name: 'POS-58BT',
+              address: '66:32:B1:8A:22:90',
+            ));
+            return n;
+          }),
         ],
       );
       addTearDown(container.dispose);
@@ -722,8 +742,13 @@ void main() {
 
       expect(find.byType(BarcodeScannerSheet), findsOneWidget);
 
-      // Tap preset 5556666 (Blackbird Classic, ৳100)
-      await tester.tap(find.text('5556666 • ব্ল্যাকবার্ড ক্লাসিক • ৳ 100'));
+      // Enter barcode 5556666 (Blackbird Classic, ৳100) into manual input
+      final sheetTextField = find.descendant(
+        of: find.byType(BarcodeScannerSheet),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(sheetTextField, '5556666');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 

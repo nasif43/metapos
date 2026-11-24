@@ -5,7 +5,6 @@ import 'package:metapos/core/theme/app_theme.dart';
 import 'package:metapos/data/models/category_model.dart';
 import 'package:metapos/data/models/dashboard_model.dart';
 import 'package:metapos/data/remote/json_rpc_client.dart';
-import 'package:metapos/data/remote/odoo_catalog_service.dart';
 import 'package:metapos/data/remote/odoo_dashboard_service.dart';
 import 'package:metapos/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:metapos/presentation/widgets/sales_report_sheet.dart';
@@ -117,11 +116,16 @@ void main() {
       expect(find.text('কপি করুন'), findsOneWidget);
     });
 
-    test('PrinterNotifier.printReportReceipt executes simulation and sets text', () async {
+    test('PrinterNotifier.printReportReceipt formats and sends text when printer is connected', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       final notifier = container.read(printerProvider.notifier);
+      // Connect real device
+      notifier.selectDevice(const BluetoothPrinterDevice(
+        name: 'Thermal-58',
+        address: 'AA:BB:CC:DD:EE:FF',
+      ));
       final success = await notifier.printReportReceipt(
         '=== TEST REPORT ===\nSales: 77,350',
         Duration.zero,
