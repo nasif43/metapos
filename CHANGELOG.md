@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2026-11-25
+
+### Fixed
+- **Android Package Downgrade Installation Failure**:
+  - Fixed `INSTALL_FAILED_VERSION_DOWNGRADE` ("App not installed as package appears to be invalid") on devices upgrading from split-ABI builds (`v1.0.0-arm64-v8a` which had `versionCode: 2001`).
+  - Bumped base version code to `2003` so all split builds (`arm64-v8a`: `4003`, `armeabi-v7a`: `3003`) and universal builds (`2003`) seamlessly upgrade over any previous release.
+  - Published dedicated architecture-optimized release assets (`metapos-v1.0.2-arm64-v8a-release.apk` ~29MB) alongside universal fallback (`~80MB`).
+
+### Changed
+- **Purged Mock Presets & Simulated Hardware**:
+  - Removed all fake Bluetooth printer devices (`POS-58BT`, `MPT-II Thermal`), simulated delays, and fake scanner preset chips.
+  - Connected real Odoo 19 `report.point_of_sale.report_saledetails.get_sale_details` backend service.
+
+---
+
 ## [1.0.1] - 2026-11-24
 
 ### Added
@@ -84,6 +99,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed the duplicate Point of Sale banner button in the dashboard hero header; POS is cleanly launched via the floating action button.
 - **Tester Credentials**:
   - Pre-filled login credentials updated to `admin` / `admin` for human testing ease.
+
+---
+
+## [1.0.2] - 2026-11-25
+
+### Fixed
+- **Android Package Downgrade Installation Failure**:
+  - Fixed `INSTALL_FAILED_VERSION_DOWNGRADE` ("App not installed as package appears to be invalid") on devices upgrading from split-ABI builds (`v1.0.0-arm64-v8a` which had `versionCode: 2001`).
+  - Bumped base version code to `2003` so all split builds (`arm64-v8a`: `4003`, `armeabi-v7a`: `3003`) and universal builds (`2003`) seamlessly upgrade over any previous release.
+  - Published dedicated architecture-optimized release assets (`metapos-v1.0.2-arm64-v8a-release.apk` ~29MB) alongside universal fallback (`~80MB`).
+
+### Changed
+- **Purged Mock Presets & Simulated Hardware**:
+  - Removed all fake Bluetooth printer devices (`POS-58BT`, `MPT-II Thermal`), simulated delays, and fake scanner preset chips.
+  - Connected real Odoo 19 `report.point_of_sale.report_saledetails.get_sale_details` backend service.
 
 ---
 

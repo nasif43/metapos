@@ -2,7 +2,7 @@ name: metapos
 description: "MetaPOS - Retail & Book Fair Flutter Mobile POS for Odoo 19"
 publish_to: 'none'
 
-version: 1.0.1+2
+version: 1.0.2+2003
 
 environment:
   sdk: ^3.13.7
