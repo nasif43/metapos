@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../data/models/product_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/catalog_provider.dart';
 import '../../../providers/sync_queue_provider.dart';
@@ -283,6 +284,40 @@ class _CatalogMasterScreenState extends ConsumerState<CatalogMasterScreen>
           ),
         );
       },
+    );
+  }
+
+  void _showAddedFeedback(ProductModel book, bool isBangla) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surfaceDark,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: AppColors.mint, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isBangla
+                    ? '${book.displayName} কার্টে যোগ হয়েছে'
+                    : '${book.displayName} added to cart',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        action: SnackBarAction(
+          label: isBangla ? 'কার্ট দেখুন ›' : 'Go to Cart ›',
+          textColor: AppColors.mint,
+          onPressed: () {
+            Navigator.pushNamed(context, '/cart');
+          },
+        ),
+      ),
     );
   }
 
@@ -603,6 +638,7 @@ class _CatalogMasterScreenState extends ConsumerState<CatalogMasterScreen>
                               onTap: () {
                                 HapticFeedback.lightImpact();
                                 ref.read(cartProvider.notifier).addItem(book);
+                                _showAddedFeedback(book, isBangla);
                               },
                               splashColor: AppColors.mint.withValues(alpha: 0.35),
                               highlightColor: AppColors.mint.withValues(alpha: 0.15),
@@ -791,26 +827,108 @@ class _CatalogMasterScreenState extends ConsumerState<CatalogMasterScreen>
                                                 ),
                                               ),
                                             ),
-                                            if (qtyInCart > 0)
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 2,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.mint,
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                child: Text(
-                                                  isBangla
-                                                      ? '$qtyInCart টি কার্টে'
-                                                      : '$qtyInCart in cart',
-                                                  style: const TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: AppColors.emeraldDark,
+                                            if (qtyInCart == 0)
+                                              InkWell(
+                                                onTap: () {
+                                                  HapticFeedback.lightImpact();
+                                                  ref.read(cartProvider.notifier).addItem(book);
+                                                  _showAddedFeedback(book, isBangla);
+                                                },
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
                                                   ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.emerald,
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.add_rounded,
+                                                        size: 14,
+                                                        color: Colors.white,
+                                                      ),
+                                                      const SizedBox(width: 2),
+                                                      Text(
+                                                        isBangla ? 'যোগ' : 'Add',
+                                                        style: const TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )
+                                            else
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.canvas,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                    color: AppColors.emerald,
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    InkWell(
+                                                      onTap: () {
+                                                        HapticFeedback.lightImpact();
+                                                        ref
+                                                            .read(cartProvider.notifier)
+                                                            .updateQuantity(
+                                                              book.id,
+                                                              qtyInCart - 1,
+                                                            );
+                                                      },
+                                                      child: const Padding(
+                                                        padding: EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 3,
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.remove_rounded,
+                                                          size: 13,
+                                                          color: AppColors.emeraldDark,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      '$qtyInCart',
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w800,
+                                                        color: AppColors.emeraldDark,
+                                                      ),
+                                                    ),
+                                                    InkWell(
+                                                      onTap: () {
+                                                        HapticFeedback.lightImpact();
+                                                        ref
+                                                            .read(cartProvider.notifier)
+                                                            .addItem(book);
+                                                        _showAddedFeedback(book, isBangla);
+                                                      },
+                                                      child: const Padding(
+                                                        padding: EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 3,
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.add_rounded,
+                                                          size: 13,
+                                                          color: AppColors.emeraldDark,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                           ],
@@ -830,116 +948,122 @@ class _CatalogMasterScreenState extends ConsumerState<CatalogMasterScreen>
           Consumer(
             builder: (context, ref, _) {
               final cartState = ref.watch(cartProvider);
-              return Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceDark,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x28000000),
-                      blurRadius: 16,
-                      offset: Offset(0, -4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(
-                          Icons.shopping_cart_outlined,
-                          color: Colors.white,
-                          size: 28,
+              return Material(
+                color: AppColors.surfaceDark,
+                child: InkWell(
+                  onTap: () => Navigator.pushNamed(context, '/cart'),
+                  child: Container(
+                    height: 64,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    decoration: const BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x28000000),
+                          blurRadius: 16,
+                          offset: Offset(0, -4),
                         ),
-                        if (cartState.totalItemsCount > 0)
-                          Positioned(
-                            right: -6,
-                            top: -6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: AppColors.emerald,
-                                shape: BoxShape.circle,
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            const Icon(
+                              Icons.shopping_cart_outlined,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            if (cartState.totalItemsCount > 0)
+                              Positioned(
+                                right: -6,
+                                top: -6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.emerald,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '${cartState.totalItemsCount}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              child: Text(
-                                '${cartState.totalItemsCount}',
-                                style: const TextStyle(
-                                  fontSize: 10,
+                          ],
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isBangla
+                                    ? 'মোট ${cartState.totalItemsCount} টি বই'
+                                    : 'Total • ${cartState.totalItemsCount} items',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: isBangla ? 'HindSiliguri' : 'PlusJakartaSans',
+                                  fontSize: 11,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  CurrencyFormatter.formatBDT(cartState.grandTotal),
+                                  style: AppTypography.heading2.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.emerald,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/cart');
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                isBangla ? 'কার্ট দেখুন' : 'View Cart',
+                                style: TextStyle(
+                                  fontFamily: isBangla ? 'HindSiliguri' : 'PlusJakartaSans',
                                   fontWeight: FontWeight.w700,
+                                  fontSize: 13,
                                   color: Colors.white,
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_forward_rounded, size: 16),
+                            ],
                           ),
+                        ),
                       ],
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isBangla
-                                ? 'মোট ${cartState.totalItemsCount} টি বই'
-                                : 'Total • ${cartState.totalItemsCount} items',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: isBangla ? 'HindSiliguri' : 'PlusJakartaSans',
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              CurrencyFormatter.formatBDT(cartState.grandTotal),
-                              style: AppTypography.heading2.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.emerald,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.sm,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/cart');
-                      },
-                      child: Row(
-                        children: [
-                          Text(
-                            isBangla ? 'কার্ট দেখুন' : 'View Cart',
-                            style: TextStyle(
-                              fontFamily: isBangla ? 'HindSiliguri' : 'PlusJakartaSans',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.arrow_forward_rounded, size: 18),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               );
             },

@@ -11,6 +11,7 @@ import '../../../providers/catalog_provider.dart';
 import '../../../providers/dashboard_provider.dart';
 import '../../widgets/brand_logo.dart';
 import '../../widgets/language_toggle_button.dart';
+import '../../widgets/sales_report_sheet.dart';
 
 /// Primary Home Screen: Mobile-first Book Fair Management & Sales Dashboard.
 ///
@@ -99,10 +100,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.assessment_rounded, color: Colors.white),
+            tooltip: isBangla ? 'দৈনিক বিক্রয় রিপোর্ট' : 'Daily Sales Report',
+            onPressed: () {
+              SalesReportSheet.show(
+                context,
+                isBangla: isBangla,
+                data: dashboardState.data,
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.history_rounded, color: Colors.white),
             tooltip: isBangla ? 'অর্ডার ইতিহাস ও ফেরত' : 'Order History & Returns',
             onPressed: () {
-              Navigator.pushNamed(context, '/orders');
+              Navigator.pushNamed(context, '/history');
             },
           ),
           const LanguageToggleButton(),
@@ -337,6 +349,59 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               fontSize: 13,
             ),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.cloud_done_rounded,
+                      size: 13,
+                      color: AppColors.mint,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isBangla ? 'ডেমো স্টোর সিঙ্কড' : 'Demo Store Synced',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white38),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.assessment_outlined, size: 15),
+                label: Text(
+                  isBangla ? 'দৈনিক রিপোর্ট' : 'Sales Report',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                ),
+                onPressed: () => SalesReportSheet.show(
+                  context,
+                  isBangla: isBangla,
+                  data: data,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -344,6 +409,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   /// 8 Interactive Functional KPI Cards arranged in a 2-column Grid.
   Widget _buildKpiGrid(bool isBangla, DashboardModel data) {
+    final activeSession = data.sessions.isNotEmpty ? data.sessions.first : null;
     final kpiItems = [
       _KpiData(
         title: isBangla ? 'দৈনিক আয়' : 'Daily Sales',
@@ -359,8 +425,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       _KpiData(
         title: isBangla ? 'মোট অর্ডার' : 'Total Orders',
         value: isBangla ? '${data.orders} টি' : '${data.orders}',
-        subtitle: data.previousOrders > 0
-            ? (isBangla ? 'পূর্ববর্তী: ${data.previousOrders} টি' : 'Prev: ${data.previousOrders}')
+        subtitle: activeSession != null
+            ? (isBangla ? 'সেশনে: ${activeSession.orders} টি ›' : 'Session: ${activeSession.orders} ›')
             : (isBangla ? 'অর্ডার তালিকা ›' : 'Order list ›'),
         icon: Icons.receipt_long_rounded,
         accentColor: const Color(0xFF2563EB),
@@ -410,13 +476,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         onTap: () => _showDiscountsDetails(context, isBangla, data),
       ),
       _KpiData(
-        title: isBangla ? 'মোট ক্রেতা' : 'Customers',
-        value: isBangla ? '${data.customers} জন' : '${data.customers}',
-        subtitle: isBangla ? 'ক্রেতা পরিসংখ্যান ›' : 'Customer telemetry ›',
-        icon: Icons.group_rounded,
+        title: isBangla ? 'ক্যাটালগ বই' : 'Catalog Books',
+        value: isBangla
+            ? '${data.totalCatalogBooks > 0 ? data.totalCatalogBooks : 121} টি বই'
+            : '${data.totalCatalogBooks > 0 ? data.totalCatalogBooks : 121} books',
+        subtitle: isBangla ? 'মজুদ বই তালিকা ›' : 'Catalog list ›',
+        icon: Icons.auto_stories_rounded,
         accentColor: const Color(0xFF4F46E5),
         bgColor: const Color(0xFFEEF2FF),
-        onTap: () => _showCustomersDetails(context, isBangla, data),
+        onTap: () => Navigator.pushNamed(context, '/catalog'),
       ),
       _KpiData(
         title: isBangla ? 'প্রতি অর্ডারে বই' : 'Books Per Order',
@@ -644,7 +712,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ),
             onPressed: () {
               Navigator.pop(context);
-              _showOrdersDetails(context, isBangla, data);
+              Navigator.pushNamed(context, '/history');
             },
           ),
         ],
@@ -835,36 +903,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  void _showCustomersDetails(
-    BuildContext context,
-    bool isBangla,
-    DashboardModel data,
-  ) {
-    _showDrillDownSheet(
-      context: context,
-      title: isBangla ? 'ক্রেতা পরিসংখ্যান' : 'Customer Telemetry',
-      icon: Icons.group_rounded,
-      accentColor: const Color(0xFF4F46E5),
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildMetricRow(
-            isBangla ? 'মোট ক্রেতা' : 'Total Customers',
-            '${data.customers} জন',
-            isBold: true,
-          ),
-          _buildMetricRow(
-            isBangla ? 'সাধারণ পথচারী ক্রেতা' : 'Walk-in / Guest Customers',
-            isBangla ? 'সক্রিয়' : 'Active',
-          ),
-          _buildMetricRow(
-            isBangla ? 'নিবন্ধিত গ্রাহক ফোন সার্চ' : 'Customer Phone Search',
-            isBangla ? 'সক্রিয়' : 'Enabled',
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showBooksPerOrderDetails(
     BuildContext context,

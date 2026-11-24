@@ -153,7 +153,11 @@ class CatalogNotifier extends StateNotifier<CatalogState> {
 
     // 1. Try local cache first for instant responsiveness
     final cachedProducts = await catalogRepository.getCachedProducts();
-    final cachedCategories = await catalogRepository.getCachedCategories();
+    final rawCachedCategories = await catalogRepository.getCachedCategories();
+    const excludedCategories = {'misc', 'miscellaneous', 'desks', 'chairs'};
+    final cachedCategories = rawCachedCategories
+        .where((c) => !excludedCategories.contains(c.name.trim().toLowerCase()))
+        .toList();
 
     if (cachedProducts.isNotEmpty) {
       state = state.copyWith(
@@ -176,7 +180,10 @@ class CatalogNotifier extends StateNotifier<CatalogState> {
     // 2. Fetch fresh from Odoo 19
     try {
       final freshProducts = await catalogRepository.fetchRemoteProducts();
-      final freshCategories = await catalogRepository.fetchRemoteCategories();
+      final rawFreshCategories = await catalogRepository.fetchRemoteCategories();
+      final freshCategories = rawFreshCategories
+          .where((c) => !excludedCategories.contains(c.name.trim().toLowerCase()))
+          .toList();
 
       // Persist to SQLite
       await catalogRepository.cacheProducts(freshProducts);

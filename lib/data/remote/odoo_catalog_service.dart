@@ -99,9 +99,11 @@ class OdooCatalogService {
     );
 
     if (result is List) {
+      const excludedCategories = {'misc', 'miscellaneous', 'desks', 'chairs'};
       return result
           .whereType<Map<String, dynamic>>()
           .map((json) => CategoryModel.fromJson(json))
+          .where((cat) => !excludedCategories.contains(cat.name.trim().toLowerCase()))
           .toList();
     }
     return [];

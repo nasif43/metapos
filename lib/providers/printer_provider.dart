@@ -229,6 +229,26 @@ class PrinterNotifier extends StateNotifier<PrinterState> {
 
     return true;
   }
+
+  /// Transmits thermal summary sales report to connected ESC/POS printer.
+  Future<bool> printReportReceipt(String reportText, [Duration? overrideDelay]) async {
+    if (!state.isConnected) return false;
+
+    state = state.copyWith(isPrinting: true);
+
+    final delay = overrideDelay ?? simulationDelay;
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
+
+    state = state.copyWith(
+      isPrinting: false,
+      lastPrintedAt: DateTime.now(),
+      lastPrintReceiptText: reportText,
+    );
+
+    return true;
+  }
 }
 
 /// Global provider for Bluetooth thermal printer state and actions.
