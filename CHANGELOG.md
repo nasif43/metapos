@@ -6,6 +6,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-11-24
+
+### Added
+- **In-App Sales Report Generation & ESC/POS Thermal Printing**:
+  - Added `SalesReportSheet` bottom modal showing daily sales summary, category breakdown, cash vs MFS split, and top selling titles.
+  - Added Bluetooth thermal receipt printing via `PrinterProvider` with ESC/POS formatting (58mm/80mm roll width support).
+  - Added one-tap "প্রতিবেদন কপি করুন" (Copy Report) to system clipboard for sharing via WhatsApp/email.
+  - Added dedicated quick action triggers in Dashboard AppBar and Hero Banner.
+- **Immediate Checkout Feedback & Dynamic Cart Dock**:
+  - Added floating SnackBar feedback with instant `"কার্ট দেখুন ›"` action button when books are added.
+  - Made the sticky bottom cart dock fully tappable with `InkWell` to transition immediately to checkout.
+- **QA Documentation & Traceability**:
+  - Added QA audit resolution matrices in `docs/feedback-implementation-status.md`, `docs/feedback-implementation-status.html`, and updated `docs/feedback-from-mrinmoyandiftekhar.xlsx`.
+
+### Fixed
+- **Dashboard History Navigation**:
+  - Resolved infinite dialog recursion in `_showOrdersDetails` where clicking "অর্ডার হিস্টোরি ও রিসিট দেখুন" previously re-opened the bottom sheet instead of navigating to `/history`.
+- **Demo Store Backend Synchronization**:
+  - Fixed disconnect where dashboard counters displayed zeroes on initial login before an order was placed.
+  - Linked active POS session telemetry (`বই মেলা/00052`, Session ID 75) and live catalog count (121 books) directly to dashboard state.
+  - Added live "ডেমো স্টোর সিঙ্কড" status badge in the hero banner.
+- **Dashboard KPI Cards & Count Parity**:
+  - Updated KPI Card 7 from "Customers: 0" to "ক্যাটালগ বই" (Catalog Books: 121), matching live Odoo inventory.
+  - Updated Total Orders card subtitle to show active booth session order count (`সেশনে: X টি`).
+- **Product Card Mobile Button Layout**:
+  - Replaced rigid, overflowing button layout on product cards with responsive `+ যোগ` (Add) button and compact `[-] qty [+]` stepper fitting small mobile screens.
+- **Catalog Category Filtering**:
+  - Filtered out default Odoo demo categories (`Misc`, `Miscellaneous`, `Desks`, `Chairs`) from both `OdooCatalogService` and `CatalogProvider`.
+
+### Performance
+- **Search Debouncing & TTL Caching**:
+  - Debounced catalog search inputs (300ms) to eliminate redundant filtering cycles during rapid typing.
+  - Implemented 60-second TTL cache for catalog fetches to reduce unnecessary backend round-trips.
+  - Added memory bounds for cover image decodes to lower RAM footprint on low-spec mobile POS devices.
+
+---
+
 ## [1.0.0] - 2026-11-22
 
 ### Added
@@ -47,6 +84,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed the duplicate Point of Sale banner button in the dashboard hero header; POS is cleanly launched via the floating action button.
 - **Tester Credentials**:
   - Pre-filled login credentials updated to `admin` / `admin` for human testing ease.
+
+---
+
+## [1.0.1] - 2026-11-24
+
+### Added
+- **In-App Sales Report Generation & ESC/POS Thermal Printing**:
+  - Added `SalesReportSheet` bottom modal showing daily sales summary, category breakdown, cash vs MFS split, and top selling titles.
+  - Added Bluetooth thermal receipt printing via `PrinterProvider` with ESC/POS formatting (58mm/80mm roll width support).
+  - Added one-tap "প্রতিবেদন কপি করুন" (Copy Report) to system clipboard for sharing via WhatsApp/email.
+  - Added dedicated quick action triggers in Dashboard AppBar and Hero Banner.
+- **Immediate Checkout Feedback & Dynamic Cart Dock**:
+  - Added floating SnackBar feedback with instant `"কার্ট দেখুন ›"` action button when books are added.
+  - Made the sticky bottom cart dock fully tappable with `InkWell` to transition immediately to checkout.
+- **QA Documentation & Traceability**:
+  - Added QA audit resolution matrices in `docs/feedback-implementation-status.md`, `docs/feedback-implementation-status.html`, and updated `docs/feedback-from-mrinmoyandiftekhar.xlsx`.
+
+### Fixed
+- **Dashboard History Navigation**:
+  - Resolved infinite dialog recursion in `_showOrdersDetails` where clicking "অর্ডার হিস্টোরি ও রিসিট দেখুন" previously re-opened the bottom sheet instead of navigating to `/history`.
+- **Demo Store Backend Synchronization**:
+  - Fixed disconnect where dashboard counters displayed zeroes on initial login before an order was placed.
+  - Linked active POS session telemetry (`বই মেলা/00052`, Session ID 75) and live catalog count (121 books) directly to dashboard state.
+  - Added live "ডেমো স্টোর সিঙ্কড" status badge in the hero banner.
+- **Dashboard KPI Cards & Count Parity**:
+  - Updated KPI Card 7 from "Customers: 0" to "ক্যাটালগ বই" (Catalog Books: 121), matching live Odoo inventory.
+  - Updated Total Orders card subtitle to show active booth session order count (`সেশনে: X টি`).
+- **Product Card Mobile Button Layout**:
+  - Replaced rigid, overflowing button layout on product cards with responsive `+ যোগ` (Add) button and compact `[-] qty [+]` stepper fitting small mobile screens.
+- **Catalog Category Filtering**:
+  - Filtered out default Odoo demo categories (`Misc`, `Miscellaneous`, `Desks`, `Chairs`) from both `OdooCatalogService` and `CatalogProvider`.
+
+### Performance
+- **Search Debouncing & TTL Caching**:
+  - Debounced catalog search inputs (300ms) to eliminate redundant filtering cycles during rapid typing.
+  - Implemented 60-second TTL cache for catalog fetches to reduce unnecessary backend round-trips.
+  - Added memory bounds for cover image decodes to lower RAM footprint on low-spec mobile POS devices.
 
 ---
 
