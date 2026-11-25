@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-11-25
+
+### Fixed
+- **Android 15+ Edge-to-Edge Navigation Bar Overlap**:
+  - Added `SafeArea(top: false)` across all sticky bottom docks, checkout bars, and screen bodies (`catalog_master_screen`, `cart_order_screen`, `order_detail_screen`, `order_success_receipt_screen`, `dashboard_screen`, `order_history_screen`, `customer_selector_screen`) so 3-button navigation bars on Android 15/16/17 (e.g., Samsung One UI) never cover interactive buttons.
+- **Live POS Session & Payment Method Binding**:
+  - Added automatic active session resolution (`ensureActiveSession`) and removed hardcoded fallback session ID `23`.
+  - Dynamically resolved `pos.payment.method` IDs per active POS counter config instead of hardcoding `1` and `2`, fixing silent sync rejections.
+- **Accurate Sync Status & User-Focused Error Messages**:
+  - Stopped disguising server sync failures as *"Queued Locally • Offline"* on the receipt screen; failed syncs now show a clear retry prompt with a one-tap **Retry Sync** button.
+  - Added `UserErrorMessage.format` across all providers and screens so cashiers never see raw technical stack traces or backend internals.
+
+### Changed
+- **Latent Offline-First Mode**:
+  - Removed the manual Offline Mode switch from the login screen; offline queuing now activates automatically only when the device loses network connectivity.
+
+---
+
 ## [1.0.2] - 2026-11-25
 
 ### Fixed
@@ -99,6 +117,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed the duplicate Point of Sale banner button in the dashboard hero header; POS is cleanly launched via the floating action button.
 - **Tester Credentials**:
   - Pre-filled login credentials updated to `admin` / `admin` for human testing ease.
+
+---
+
+## [1.0.3] - 2026-11-25
+
+### Fixed
+- **Android 15+ Edge-to-Edge Navigation Bar Overlap**:
+  - Added `SafeArea(top: false)` across all sticky bottom docks, checkout bars, and screen bodies (`catalog_master_screen`, `cart_order_screen`, `order_detail_screen`, `order_success_receipt_screen`, `dashboard_screen`, `order_history_screen`, `customer_selector_screen`) so 3-button navigation bars on Android 15/16/17 (e.g., Samsung One UI) never cover interactive buttons.
+- **Live POS Session & Payment Method Binding**:
+  - Added automatic active session resolution (`ensureActiveSession`) and removed hardcoded fallback session ID `23`.
+  - Dynamically resolved `pos.payment.method` IDs per active POS counter config instead of hardcoding `1` and `2`, fixing silent sync rejections.
+- **Accurate Sync Status & User-Focused Error Messages**:
+  - Stopped disguising server sync failures as *"Queued Locally • Offline"* on the receipt screen; failed syncs now show a clear retry prompt with a one-tap **Retry Sync** button.
+  - Added `UserErrorMessage.format` across all providers and screens so cashiers never see raw technical stack traces or backend internals.
+
+### Changed
+- **Latent Offline-First Mode**:
+  - Removed the manual Offline Mode switch from the login screen; offline queuing now activates automatically only when the device loses network connectivity.
 
 ---
 
