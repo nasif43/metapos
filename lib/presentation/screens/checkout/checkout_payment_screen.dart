@@ -119,6 +119,23 @@ class _CheckoutPaymentScreenState extends ConsumerState<CheckoutPaymentScreen>
         return;
       }
 
+      final isConnected = ref.read(connectivityProvider);
+      final authState = ref.read(authSessionProvider);
+      var sessionState = ref.read(sessionProvider);
+      final configId = sessionState.selectedConfig?.id ?? 1;
+
+      if (isConnected &&
+          !authState.isOfflineMode &&
+          sessionState.activeSession == null &&
+          sessionState.selectedConfig?.currentSessionId == null) {
+        await ref.read(sessionProvider.notifier).ensureActiveSession(configId);
+        if (!mounted) return;
+        sessionState = ref.read(sessionProvider);
+      }
+
+      final cashMethodId = sessionState.resolveCashMethodId();
+      final nonCashMethodId = sessionState.resolveNonCashMethodId();
+
       final activeTab = _tabController.index;
       final List<PaymentLineModel> paymentLines = [];
 
@@ -142,7 +159,7 @@ class _CheckoutPaymentScreenState extends ConsumerState<CheckoutPaymentScreen>
 
         paymentLines.add(
           PaymentLineModel.create(
-            paymentMethodId: 1,
+            paymentMethodId: cashMethodId,
             paymentMethodName: 'Cash',
             amount: tendered,
           ),
@@ -152,7 +169,7 @@ class _CheckoutPaymentScreenState extends ConsumerState<CheckoutPaymentScreen>
         if (change > 0) {
           paymentLines.add(
             PaymentLineModel.create(
-              paymentMethodId: 1,
+              paymentMethodId: cashMethodId,
               paymentMethodName: 'Cash',
               amount: -change,
               isChange: true,
@@ -164,7 +181,7 @@ class _CheckoutPaymentScreenState extends ConsumerState<CheckoutPaymentScreen>
         // Card payment - 100% of payment via single channel
         paymentLines.add(
           PaymentLineModel.create(
-            paymentMethodId: 2,
+            paymentMethodId: nonCashMethodId,
             paymentMethodName: 'Card',
             amount: totalDue,
             cardBrand: _selectedCardType,
@@ -180,7 +197,7 @@ class _CheckoutPaymentScreenState extends ConsumerState<CheckoutPaymentScreen>
         // bKash / MFS payment - 100% of payment via single channel
         paymentLines.add(
           PaymentLineModel.create(
-            paymentMethodId: 2,
+            paymentMethodId: nonCashMethodId,
             paymentMethodName: _selectedMfsProvider,
             amount: totalDue,
             paymentRefNo: _mfsPhoneController.text.trim().isNotEmpty
@@ -193,13 +210,9 @@ class _CheckoutPaymentScreenState extends ConsumerState<CheckoutPaymentScreen>
         );
       }
 
-      final sessionState = ref.read(sessionProvider);
-      final authState = ref.read(authSessionProvider);
-
       final sessionId = sessionState.activeSession?.id ??
           sessionState.selectedConfig?.currentSessionId ??
-          23;
-      final configId = sessionState.selectedConfig?.id ?? 1;
+          0;
       final partnerId = cartState.customer?.id;
       final userId = authState.userId ?? 2;
 
@@ -217,9 +230,8 @@ class _CheckoutPaymentScreenState extends ConsumerState<CheckoutPaymentScreen>
         userId: userId,
       );
 
-      // 1. Submit to SQLite offline queue & trigger Odoo sync via OrderRepository
-      final isConnected = ref.read(connectivityProvider);
-      final isOnline = isConnected || authState.isAuthenticated;
+      // 1. Submit to SQLite offline queue & trigger live sync via OrderRepository
+      final isOnline = isConnected && !authState.isOfflineMode;
       final completedOrder = await ref.read(orderRepositoryProvider).submitOrder(
             order,
             isOnline: isOnline,

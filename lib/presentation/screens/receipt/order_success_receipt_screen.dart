@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/user_error_message.dart';
 import '../../../data/models/order_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/order_provider.dart';
@@ -49,7 +50,12 @@ class OrderSuccessReceiptScreen extends ConsumerWidget {
     final syncStatusAsync = order != null
         ? ref.watch(orderSyncStatusProvider(order.uuid))
         : const AsyncValue<String?>.data(null);
+    final syncErrorAsync = order != null
+        ? ref.watch(orderSyncErrorProvider(order.uuid))
+        : const AsyncValue<String?>.data(null);
     final isSynced = (order?.isSynced ?? false) || (syncStatusAsync.value == 'synced');
+    final isSyncFailed = !isSynced && (syncStatusAsync.value == 'failed');
+    final syncQueueState = ref.watch(syncQueueProvider);
 
     return PopScope(
       canPop: false,
@@ -95,7 +101,9 @@ class OrderSuccessReceiptScreen extends ConsumerWidget {
             SizedBox(width: 4),
           ],
         ),
-        body: order == null
+        body: SafeArea(
+          top: false,
+          child: order == null
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xl),
@@ -182,13 +190,17 @@ class OrderSuccessReceiptScreen extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: isSynced
                                 ? AppColors.statusInStockBg
-                                : AppColors.statusLowStockBg,
+                                : (isSyncFailed
+                                    ? AppColors.statusOutOfStockBg
+                                    : AppColors.statusLowStockBg),
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.radiusSm),
                             border: Border.all(
                               color: isSynced
                                   ? AppColors.statusInStock
-                                  : AppColors.statusLowStock,
+                                  : (isSyncFailed
+                                      ? AppColors.statusOutOfStock
+                                      : AppColors.statusLowStock),
                             ),
                           ),
                           child: Row(
@@ -197,10 +209,14 @@ class OrderSuccessReceiptScreen extends ConsumerWidget {
                               Icon(
                                 isSynced
                                     ? Icons.cloud_done_rounded
-                                    : Icons.cloud_queue_rounded,
+                                    : (isSyncFailed
+                                        ? Icons.cloud_off_rounded
+                                        : Icons.cloud_queue_rounded),
                                 color: isSynced
                                     ? AppColors.statusInStock
-                                    : AppColors.statusLowStock,
+                                    : (isSyncFailed
+                                        ? AppColors.statusOutOfStock
+                                        : AppColors.statusLowStock),
                                 size: 16,
                               ),
                               const SizedBox(width: 6),
@@ -209,19 +225,60 @@ class OrderSuccessReceiptScreen extends ConsumerWidget {
                                     ? (isBangla
                                         ? (AppStrings.syncedOnline['bn'] ?? 'সার্ভারে সংরক্ষিত')
                                         : 'Synced with Cloud')
-                                    : (isBangla
-                                        ? 'অফলাইনে জমা হয়েছে'
-                                        : 'Queued Locally • Offline'),
+                                    : (isSyncFailed
+                                        ? (isBangla
+                                            ? 'সার্ভারে পাঠানো যায়নি'
+                                            : 'Could Not Sync with Server')
+                                        : (isBangla
+                                            ? 'অফলাইনে জমা হয়েছে'
+                                            : 'Queued Locally • Offline')),
                                 style: AppTypography.caption.copyWith(
                                   color: isSynced
                                       ? AppColors.statusInStock
-                                      : AppColors.statusLowStock,
+                                      : (isSyncFailed
+                                          ? AppColors.statusOutOfStock
+                                          : AppColors.statusLowStock),
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        if (isSyncFailed) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            UserErrorMessage.format(
+                              syncErrorAsync.value,
+                              isBangla: isBangla,
+                            ),
+                            textAlign: TextAlign.center,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          TextButton.icon(
+                            onPressed: syncQueueState.isSyncing
+                                ? null
+                                : () {
+                                    ref
+                                        .read(syncQueueProvider.notifier)
+                                        .syncPendingOrders();
+                                  },
+                            icon: syncQueueState.isSyncing
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.refresh_rounded, size: 18),
+                            label: Text(
+                              isBangla ? 'আবার সিঙ্ক করুন' : 'Retry Sync',
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.lg),
 
                         // Thermal Receipt Preview Card (32-column roll preview)
@@ -524,6 +581,7 @@ class OrderSuccessReceiptScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+        ),
       ),
     );
   }

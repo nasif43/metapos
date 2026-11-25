@@ -910,9 +910,12 @@ class _CartOrderScreenState extends ConsumerState<CartOrderScreen> {
           // Order Financial Breakdown Card (Whole BDT numbers, no decimals)
           if (cartState.items.isNotEmpty)
             Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
               color: AppColors.surface,
-              child: Column(
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1003,6 +1006,8 @@ class _CartOrderScreenState extends ConsumerState<CartOrderScreen> {
                     ),
                   ),
                 ],
+              ),
+                ),
               ),
             ),
         ],

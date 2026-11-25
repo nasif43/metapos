@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/user_error_message.dart';
 import '../data/models/order_model.dart';
 import '../data/repositories/order_repository.dart';
 import 'order_provider.dart';
@@ -327,7 +328,7 @@ class ReturnOrderNotifier extends StateNotifier<ReturnOrderState> {
       // 7. On error: catches exception, sets isSubmitting: false, error: exception.toString()
       state = state.copyWith(
         isSubmitting: false,
-        error: e.toString(),
+        error: UserErrorMessage.format(e),
       );
       return null;
     }

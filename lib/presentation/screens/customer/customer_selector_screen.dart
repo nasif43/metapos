@@ -185,7 +185,9 @@ class _CustomerSelectorScreenState
           SizedBox(width: 4),
         ],
       ),
-      body: Column(
+      body: SafeArea(
+        top: false,
+        child: Column(
         children: [
           // Search & Quick-Add Bar
           Container(
@@ -317,6 +319,7 @@ class _CustomerSelectorScreenState
                       ),
           ),
         ],
+        ),
       ),
     );
   }

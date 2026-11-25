@@ -381,8 +381,8 @@ void main() {
           .loadCatalog(forceRefresh: true);
 
       expect(result.success, isFalse);
-      expect(result.errorMessage, contains('Connection timed out'));
-      expect(container.read(catalogProvider).errorMessage, contains('Connection timed out'));
+      expect(result.errorMessage, contains('ইন্টারনেট সংযোগে সমস্যা হচ্ছে'));
+      expect(container.read(catalogProvider).errorMessage, contains('ইন্টারনেট সংযোগে সমস্যা হচ্ছে'));
     });
   });
 

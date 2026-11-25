@@ -132,4 +132,21 @@ class OdooSessionService {
     }
     return null;
   }
+
+  /// Queries available POS payment methods (`pos.payment.method`) from Odoo 19.
+  Future<List<Map<String, dynamic>>> fetchPaymentMethods() async {
+    final result = await client.executeCall(
+      'pos.payment.method',
+      'search_read',
+      [[]],
+      {
+        'fields': ['id', 'name', 'is_cash_count', 'config_ids'],
+      },
+    );
+
+    if (result is List) {
+      return result.whereType<Map<String, dynamic>>().toList();
+    }
+    return [];
+  }
 }

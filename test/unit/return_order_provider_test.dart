@@ -483,7 +483,7 @@ void main() {
 
         final state = container.read(returnOrderProvider);
         expect(state.isSubmitting, isFalse);
-        expect(state.error, contains('No items selected for return'));
+        expect(state.error, contains('পণ্যের পরিমাণ সঠিক নয়'));
       });
 
       test('Invariant 2: No original order fails', () async {
@@ -499,7 +499,7 @@ void main() {
 
         final state = container.read(returnOrderProvider);
         expect(state.isSubmitting, isFalse);
-        expect(state.error, contains('No original order selected'));
+        expect(state.error, contains('এই মুহূর্তে কাজটি সম্পন্ন করা যায়নি'));
       });
 
       test('Invariant 3: No payment method fails', () async {
@@ -516,7 +516,7 @@ void main() {
 
         final state = container.read(returnOrderProvider);
         expect(state.isSubmitting, isFalse);
-        expect(state.error, contains('No payment method selected'));
+        expect(state.error, contains('নির্বাচিত পেমেন্ট পদ্ধতি'));
       });
 
       test('Invariant 4: No active POS session fails', () async {
@@ -534,7 +534,7 @@ void main() {
 
         final state = container.read(returnOrderProvider);
         expect(state.isSubmitting, isFalse);
-        expect(state.error, contains('No active POS session found'));
+        expect(state.error, contains('কাউন্টার সেশন চালু নেই'));
       });
     });
 
@@ -683,7 +683,9 @@ void main() {
 
       final state = container.read(returnOrderProvider);
       expect(state.isSubmitting, isFalse);
-      expect(state.error, contains('Odoo JSON-RPC 503 Service Unavailable'));
+      expect(state.error, isNotNull);
+      expect(state.error, isNot(contains('Odoo')));
+      expect(state.error, isNot(contains('503')));
       expect(state.completedRefundOrder, isNull);
 
       // Receipt provider was NOT updated

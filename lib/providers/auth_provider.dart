@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/user_error_message.dart';
 import '../data/remote/json_rpc_client.dart';
 import '../data/remote/odoo_auth_service.dart';
 
@@ -107,7 +108,7 @@ class AuthSessionNotifier extends StateNotifier<AuthSessionState> {
       state = state.copyWith(
         isAuthenticated: false,
         isLoading: false,
-        errorMessage: e.toString(),
+        errorMessage: UserErrorMessage.format(e),
       );
       return false;
     }

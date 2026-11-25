@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/user_error_message.dart';
 import '../data/models/order_model.dart';
 import '../data/repositories/order_repository.dart';
 
@@ -132,7 +133,7 @@ class PastOrdersNotifier extends StateNotifier<PastOrdersState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: UserErrorMessage.format(e),
       );
     }
   }

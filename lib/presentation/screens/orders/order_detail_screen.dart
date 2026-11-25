@@ -72,8 +72,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         ),
         actions: const [LanguageToggleButton(), SizedBox(width: 4)],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -101,6 +103,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
             const SizedBox(height: AppSpacing.xl),
           ],
+        ),
         ),
       ),
       floatingActionButton: order.isRefund

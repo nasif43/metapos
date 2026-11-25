@@ -157,7 +157,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           Navigator.pushNamed(context, '/catalog');
         },
       ),
-      body: RefreshIndicator(
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
         color: AppColors.emerald,
         onRefresh: _handleRefresh,
         child: SingleChildScrollView(
@@ -240,6 +242,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               const SizedBox(height: 80), // Space for FAB
             ],
           ),
+        ),
         ),
       ),
     );

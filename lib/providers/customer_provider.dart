@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/user_error_message.dart';
 import '../data/local/database_helper.dart';
 import '../data/models/partner_model.dart';
 import '../data/remote/odoo_partner_service.dart';
@@ -102,7 +103,7 @@ class CustomerNotifier extends StateNotifier<CustomerState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: localMatches.isEmpty ? e.toString() : null,
+        errorMessage: localMatches.isEmpty ? UserErrorMessage.format(e) : null,
       );
     }
   }
@@ -147,7 +148,7 @@ class CustomerNotifier extends StateNotifier<CustomerState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString(),
+        errorMessage: UserErrorMessage.format(e),
       );
       return null;
     }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/user_error_message.dart';
 import '../data/models/dashboard_model.dart';
 import '../data/remote/odoo_dashboard_service.dart';
 import 'auth_provider.dart';
@@ -70,7 +71,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString(),
+        errorMessage: UserErrorMessage.format(e),
       );
     }
   }

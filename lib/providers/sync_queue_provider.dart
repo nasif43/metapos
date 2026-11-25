@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/user_error_message.dart';
 import '../data/local/offline_queue_repository.dart';
 import '../data/models/order_model.dart';
 import '../data/remote/odoo_order_service.dart';
@@ -136,7 +137,7 @@ class SyncQueueNotifier extends StateNotifier<SyncQueueState> {
         await queueRepo.markFailed(order.uuid, errorString);
         await queueRepo.incrementRetry(order.uuid);
         if (mounted) {
-          state = state.copyWith(lastError: errorString);
+          state = state.copyWith(lastError: UserErrorMessage.format(e));
         }
       }
     }
@@ -214,4 +215,13 @@ final orderSyncStatusProvider =
   final queueRepo = ref.watch(offlineQueueRepositoryProvider);
   final orderMap = await queueRepo.getOrder(uuid);
   return orderMap?['sync_status'] as String?;
+});
+
+/// Watches the raw last error for an order that failed to sync.
+final orderSyncErrorProvider =
+    FutureProvider.family<String?, String>((ref, uuid) async {
+  ref.watch(syncQueueProvider);
+  final queueRepo = ref.watch(offlineQueueRepositoryProvider);
+  final orderMap = await queueRepo.getOrder(uuid);
+  return orderMap?['last_error'] as String?;
 });

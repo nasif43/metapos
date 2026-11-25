@@ -950,8 +950,10 @@ class _CatalogMasterScreenState extends ConsumerState<CatalogMasterScreen>
               final cartState = ref.watch(cartProvider);
               return Material(
                 color: AppColors.surfaceDark,
-                child: InkWell(
-                  onTap: () => Navigator.pushNamed(context, '/cart'),
+                child: SafeArea(
+                  top: false,
+                  child: InkWell(
+                    onTap: () => Navigator.pushNamed(context, '/cart'),
                   child: Container(
                     height: 64,
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -1064,6 +1066,7 @@ class _CatalogMasterScreenState extends ConsumerState<CatalogMasterScreen>
                       ],
                     ),
                   ),
+                ),
                 ),
               );
             },

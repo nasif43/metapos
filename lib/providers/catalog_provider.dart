@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/user_error_message.dart';
 import '../data/local/database_helper.dart';
 import '../data/models/category_model.dart';
 import '../data/models/product_model.dart';
@@ -203,7 +204,7 @@ class CatalogNotifier extends StateNotifier<CatalogState> {
         isFromCache: false,
       );
     } catch (e) {
-      final errorMsg = e.toString();
+      final errorMsg = UserErrorMessage.format(e);
       // Record error message in state
       state = state.copyWith(
         isLoading: false,

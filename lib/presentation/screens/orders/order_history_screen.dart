@@ -94,7 +94,9 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
           SizedBox(width: 4),
         ],
       ),
-      body: Column(
+      body: SafeArea(
+        top: false,
+        child: Column(
         children: [
           // Search bar + barcode button
           Container(
@@ -215,6 +217,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
             child: _buildBody(context, isBangla, state),
           ),
         ],
+      ),
       ),
     );
   }

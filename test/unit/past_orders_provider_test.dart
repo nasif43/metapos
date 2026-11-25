@@ -378,7 +378,7 @@ void main() {
 
       final state = container.read(pastOrdersProvider);
       expect(state.isLoading, isFalse);
-      expect(state.error, contains('Network connection timed out'));
+      expect(state.error, contains('ইন্টারনেট সংযোগে সমস্যা হচ্ছে'));
       expect(state.orders, isEmpty);
       expect(state.filteredOrders, isEmpty);
     });

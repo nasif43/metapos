@@ -5,8 +5,10 @@ import '../../../core/localization/locale_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/user_error_message.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../providers/connectivity_provider.dart';
 import '../../../providers/dashboard_provider.dart';
 import '../../../providers/session_provider.dart';
 import '../../widgets/brand_logo.dart';
@@ -35,7 +37,6 @@ class _SessionLoginScreenState extends ConsumerState<SessionLoginScreen> {
 
   bool _obscurePassword = true;
   bool _rememberLogin = true;
-  bool _offlineMode = false;
   int _selectedConfigId = 1; // 1: Book Fair, 2: nilkhet
   bool _isLoggingIn = false;
 
@@ -56,8 +57,9 @@ class _SessionLoginScreenState extends ConsumerState<SessionLoginScreen> {
     setState(() => _isLoggingIn = true);
 
     try {
-      if (_offlineMode) {
-        // Offline cache mode
+      final isOnline = ref.read(connectivityProvider);
+      if (!isOnline) {
+        // Latent offline-first fallback when device has no internet connection
         ref.read(authSessionProvider.notifier).toggleOfflineMode(true);
         await ref.read(catalogProvider.notifier).loadCatalog(isOffline: true);
         if (!mounted) return;
@@ -65,7 +67,7 @@ class _SessionLoginScreenState extends ConsumerState<SessionLoginScreen> {
         return;
       }
 
-      // Online authentication against Odoo 19
+      // Online authentication against backend
       final success = await ref.read(authSessionProvider.notifier).login(
             baseUrl: _serverController.text.trim(),
             db: _dbController.text.trim(),
@@ -78,11 +80,16 @@ class _SessionLoginScreenState extends ConsumerState<SessionLoginScreen> {
       if (success) {
         ref.read(authSessionProvider.notifier).toggleOfflineMode(false);
 
-        // Fetch configs so activeSession / currentSessionId is properly populated
+        // Fetch configs & payment methods
         await ref.read(sessionProvider.notifier).loadConfigs();
 
-        // Bind selected terminal config
-        await ref.read(sessionProvider.notifier).selectConfig(_selectedConfigId);
+        // Bind selected terminal config and ensure an open POS session exists
+        final openingFloat =
+            double.tryParse(_openingFloatController.text.trim()) ?? 0.0;
+        await ref.read(sessionProvider.notifier).ensureActiveSession(
+              _selectedConfigId,
+              openingFloat: openingFloat,
+            );
 
         // Pre-fetch live catalog and live dashboard telemetry
         await Future.wait([
@@ -98,9 +105,10 @@ class _SessionLoginScreenState extends ConsumerState<SessionLoginScreen> {
           SnackBar(
             backgroundColor: AppColors.surfaceDark,
             content: Text(
-              isBangla
-                  ? 'লগইন ব্যর্থ: ${error ?? "ব্যবহারকারী বা পাসওয়ার্ড ভুল"}'
-                  : 'Login failed: ${error ?? "Invalid credentials"}',
+              error ??
+                  (isBangla
+                      ? 'লগইন করা যায়নি। অনুগ্রহ করে তথ্য যাচাই করুন।'
+                      : 'Sign in failed. Please check your credentials.'),
               style: const TextStyle(color: Colors.white),
             ),
           ),
@@ -112,7 +120,7 @@ class _SessionLoginScreenState extends ConsumerState<SessionLoginScreen> {
         SnackBar(
           backgroundColor: AppColors.surfaceDark,
           content: Text(
-            isBangla ? 'ত্রুটি: $e' : 'Error: $e',
+            UserErrorMessage.format(e, isBangla: isBangla),
             style: const TextStyle(color: Colors.white),
           ),
         ),
@@ -375,23 +383,7 @@ class _SessionLoginScreenState extends ConsumerState<SessionLoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Options & Toggles
-                    SwitchListTile(
-                      value: _offlineMode,
-                      activeThumbColor: AppColors.emerald,
-                      title: Text(
-                        isBangla ? 'অফলাইন মোড' : 'Offline Mode',
-                      ),
-                      subtitle: Text(
-                        isBangla
-                            ? 'সংযোগহীন বিক্রয়'
-                            : 'Queue sales locally',
-                      ),
-                      onChanged: (val) {
-                        setState(() => _offlineMode = val);
-                        ref.read(authSessionProvider.notifier).toggleOfflineMode(val);
-                      },
-                    ),
+                    // Options
                     CheckboxListTile(
                       value: _rememberLogin,
                       activeColor: AppColors.emerald,
